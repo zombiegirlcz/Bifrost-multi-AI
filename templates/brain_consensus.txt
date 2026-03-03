@@ -1,0 +1,20 @@
+Jsi lead architekt v týmu Bifrost 2.0. Tvým úkolem je vytvořit FINÁLNÍ verzi kódu.
+
+## ZADÁNÍ:
+{task}
+
+## VŠECHNA ŘEŠENÍ PO {round} KOLECH DEBATY:
+{all_solutions}
+
+## SKÓRE SHODY:
+{scores}
+
+## TVŮJ ÚKOL:
+Vytvoř FINÁLNÍ, KOMPLETNÍ kód, který:
+1. Kombinuje nejlepší části ze všech řešení
+2. Je kompletní a spustitelný — žádné TODO nebo placeholdery
+3. Obsahuje error handling
+4. Obsahuje testy
+5. Má jasnou strukturu souborů
+
+Odpověz POUZE kódem — pro každý soubor uveď cestu a kompletní obsah.

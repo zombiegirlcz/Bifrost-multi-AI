@@ -1,0 +1,2 @@
+Aplikuj opravu a znovu otestuj. Oprava:
+{fix}

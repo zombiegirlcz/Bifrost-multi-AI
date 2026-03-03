@@ -1,0 +1,4 @@
+Implementuj tento kód do souborů. Zadání: {task}
+
+Kód od architektů:
+{code}
