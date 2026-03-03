@@ -22,9 +22,38 @@ COOKIES_DIR = BASE_DIR / "cookies"
 
 def clean_cookies(input_file: str, service_name: str) -> list:
     """Vyčistí cookies — zachová jen důležitá pole."""
+    import re
     
-    with open(input_file) as f:
-        data = json.load(f)
+    with open(input_file, encoding='utf-8') as f:
+        raw_text = f.read().strip()
+    
+    # Oprav formát: "session[ ... ] → [ ... ]
+    if raw_text.startswith('"session['):
+        raw_text = raw_text.replace('"session[', '[', 1)
+        if raw_text.endswith(']"'):
+            raw_text = raw_text[:-1]
+    
+    # HLAVNÍ OPRAVA: Problematická linie typu: "sameSite": null,": false,
+    # Regex: najdi `null,": false,` a nahraď `null,`
+    raw_text = re.sub(r'null,": false,', 'null,', raw_text)
+    
+    # Odstraň neplatné klíče: ": false, (bez prvního ")
+    raw_text = re.sub(r'",\s*": false,', ',', raw_text)
+    
+    # Normalizuj case: "lex" → "Lex", "string" → "String" (v hodnotách)
+    raw_text = raw_text.replace('"lex"', '"Lex"')
+    raw_text = raw_text.replace('"string"', '"String"')
+    
+    try:
+        data = json.loads(raw_text)
+    except json.JSONDecodeError as e:
+        print(f"❌ JSON parse error: {e}")
+        print(f"   Position: line {e.lineno}, col {e.colno}")
+        # Debug: vytiskni okolí chyby
+        lines = raw_text.split('\n')
+        if e.lineno <= len(lines):
+            print(f"   Line: {lines[e.lineno-1]}")
+        raise
     
     # Handle both array a "session" wrapper
     if isinstance(data, dict) and "session" in data:
