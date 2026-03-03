@@ -68,6 +68,9 @@ MAX_FIX_ITERATIONS = 5    # Max pokusů o opravu chyb
 RATE_LIMIT_DELAY = 3.0    # Sekundy mezi requesty na stejný model
 CONSENSUS_THRESHOLD = 0.7  # Shoda potřebná pro konsenzus (0-1)
 
+# Security simulace
+SECURITY_MODE = False         # True = kyber-simulace místo coding workflow
+
 # Logování
 LOG_LEVEL = "INFO"
 LOG_FILE = BASE_DIR / "bifrost.log"

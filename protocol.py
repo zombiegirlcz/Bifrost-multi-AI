@@ -21,6 +21,12 @@ class Phase(str, Enum):
     FIX_APPLIED = "fix_applied"
     COMPLETE = "complete"
     ERROR = "error"
+    # Security simulation fáze
+    SECURITY_ROUND = "security_round"
+    SECURITY_REVIEW = "security_review"
+    SECURITY_CONSENSUS = "security_consensus"
+    SECURITY_EXPLOIT = "security_exploit"
+    SECURITY_DEFENSE = "security_defense"
 
 
 class Status(str, Enum):

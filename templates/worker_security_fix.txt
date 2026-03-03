@@ -1,0 +1,15 @@
+Bezpečnostní tým identifikoval nedostatky v obraně. Aplikuj vylepšení.
+
+## VÝSLEDKY PŘEDCHOZÍHO TESTU:
+{test_report}
+
+## NAVRHOVANÉ OPRAVY:
+{fix}
+
+## ÚKOLY:
+1. Aplikuj opravy do secure_app.py a detect.py
+2. Uprav exploit.py pokud se změnil vektor útoku
+3. Aktualizuj testy
+4. Znovu spusť celou bezpečnostní sadu
+
+Odpověz ve stejném JSON formátu (files + test_results).
