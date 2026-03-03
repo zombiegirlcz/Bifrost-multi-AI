@@ -72,19 +72,18 @@ def clean_cookies(input_file: str, service_name: str) -> list:
             "httpOnly": cookie.get("httpOnly", False),
         }
         
-        # SameSite oprava case
+        # SameSite oprava case — Playwright chce "Strict"|"Lax"|"None" nebo CHYBÍ
         same_site = cookie.get("sameSite")
-        if same_site:
-            if same_site.lower() == "lax":
+        if same_site and same_site != "null":
+            if isinstance(same_site, str) and same_site.lower() == "lax":
                 cleaned_cookie["sameSite"] = "Lax"
-            elif same_site.lower() == "strict":
+            elif isinstance(same_site, str) and same_site.lower() == "strict":
                 cleaned_cookie["sameSite"] = "Strict"
-            elif same_site.lower() == "none":
+            elif isinstance(same_site, str) and same_site.lower() == "none":
                 cleaned_cookie["sameSite"] = "None"
-            else:
+            elif isinstance(same_site, str) and same_site in ("Lax", "Strict", "None"):
                 cleaned_cookie["sameSite"] = same_site
-        else:
-            cleaned_cookie["sameSite"] = None
+        # Pokud sameSite chybí nebo je null, NEULOŽ nic (Playwright default)
         
         # Expiration date pokud existuje
         if "expirationDate" in cookie:

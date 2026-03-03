@@ -135,14 +135,15 @@ class HumanBehavior:
         """Celá rutina anti-detection před odesláním zprávy."""
         # 50% šance že něco uděláš
         if random.random() > 0.5:
-            action = random.choice([
-                self.scroll_around(1),
-                self.random_hover(),
-                self.open_close_panel(),
-                self.random_click_empty(),
-            ])
+            actions = [
+                lambda: self.scroll_around(1),
+                lambda: self.random_hover(),
+                lambda: self.open_close_panel(),
+                lambda: self.random_click_empty(),
+            ]
+            action_func = random.choice(actions)
             try:
-                await action
+                await action_func()
             except:
                 pass
 
