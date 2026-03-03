@@ -44,6 +44,13 @@ class AISession:
             if Path(cookies_path).exists():
                 with open(cookies_path, "r") as f:
                     cookies = json.load(f)
+                # Runtime sanitizace — Playwright vyžaduje sameSite jako "Strict"|"Lax"|"None"
+                for c in cookies:
+                    if "sameSite" in c:
+                        if c["sameSite"] is None:
+                            del c["sameSite"]
+                        elif c["sameSite"] not in ("Strict", "Lax", "None"):
+                            del c["sameSite"]
 
             self.context = await self.browser.new_context(
                 user_agent=(
