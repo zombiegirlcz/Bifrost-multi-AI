@@ -27,11 +27,14 @@ Formát: JSON pole cookies z prohlížeče.
 ## 📝 Použití
 
 ```bash
-# Základní použití
+# Základní použití (mailbox mode — CLI Copilot jako dělník)
 python main.py --task "Vytvoř REST API pro správu úkolů"
 
 # S parametry
 python main.py --task "Snake hra v Pythonu" --rounds 5 --max-fix 10
+
+# Playwright mode (web automation — starý způsob)
+python main.py --worker playwright --task "Kalkulačka v Pythonu"
 
 # Interaktivní
 python main.py
@@ -39,8 +42,32 @@ python main.py
 
 ## 🏗️ Architektura
 
+### Mailbox Mode (default) — CLI Copilot jako dělník
 ```
-TY → Orchestrátor → Mozky (debata) → Copilot (stavba + testy) → Feedback loop
+Terminál 1:  python main.py -t "úkol"
+             Mozky debatují (Playwright) → zapíše úkol do queue/
+
+Terminál 2:  python copilot_executor.py
+             → zobrazí úkol → uživatel řekne CLI Copilotovi "proveď to"
+             → CLI Copilot SKUTEČNĚ vytvoří soubory, spustí testy
+             → výsledek se zapíše do queue/results/
+
+Terminál 1:  Orchestrátor vyzvedne výsledek → pokračuje
+```
+
+### Playwright Mode (legacy) — web automation
+```
+TY → Orchestrátor → Mozky (debata) → Copilot web chat (simulace) → Feedback loop
+```
+
+## 📬 Copilot Executor
+
+```bash
+# Zobraz čekající úkoly
+python copilot_executor.py --list
+
+# Detail konkrétního úkolu
+python copilot_executor.py --task task_001
 ```
 
 ## 📁 Výstupy

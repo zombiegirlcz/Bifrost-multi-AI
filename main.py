@@ -13,17 +13,19 @@ from utils.logger import log_banner, log_phase, log_error, console
 @click.option("--task", "-t", prompt="📝 Zadej úkol", help="Co má tým vytvořit")
 @click.option("--rounds", "-r", default=3, help="Počet kol debaty (default: 3)")
 @click.option("--max-fix", "-f", default=5, help="Max opravných iterací (default: 5)")
+@click.option("--worker", "-w", default="mailbox",
+              type=click.Choice(["mailbox", "playwright"]),
+              help="Worker: mailbox (CLI Copilot) nebo playwright (web automation)")
 @click.option("--verbose", "-v", is_flag=True, help="Podrobný výstup")
-def main(task: str, rounds: int, max_fix: int, verbose: bool):
+def main(task: str, rounds: int, max_fix: int, worker: str, verbose: bool):
     """🌈 Bifrost 2.0 — Spusť svůj AI vývojový tým."""
 
-    # Override config pokud zadáno
+    import config
     if rounds != 3:
-        import config
         config.BRAIN_ROUNDS = rounds
     if max_fix != 5:
-        import config
         config.MAX_FIX_ITERATIONS = max_fix
+    config.WORKER_MODE = worker
 
     asyncio.run(run_bifrost(task, verbose))
 

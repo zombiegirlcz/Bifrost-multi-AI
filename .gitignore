@@ -7,3 +7,6 @@ cookies/*.json
 !cookies/.gitkeep
 output/*
 !output/.gitkeep
+queue/pending/*.json
+queue/results/*.json
+!queue/.gitkeep

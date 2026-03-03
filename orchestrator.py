@@ -9,7 +9,7 @@ from feedback_loop import FeedbackLoop
 from protocol import BifrostMessage, Phase, Status
 from utils.logger import log_phase, log_banner, log_code
 from utils.file_manager import FileManager
-from config import OUTPUT_DIR
+from config import OUTPUT_DIR, WORKER_MODE
 
 
 class Orchestrator:
@@ -29,19 +29,24 @@ class Orchestrator:
         await self.session_manager.initialize()
 
         brains = self.session_manager.get_brains()
-        copilot = self.session_manager.get_worker()
 
         if not brains:
             raise RuntimeError("Žádný mozek není připojen! Zkontroluj cookies.")
 
-        if not copilot:
-            raise RuntimeError("Copilot není připojen! Zkontroluj cookies.")
-
         self.brain_council = BrainCouncil(brains)
-        self.worker = Worker(copilot, self.file_manager)
 
-        log_phase("complete", "orchestrator",
-                 f"Připojeno: {len(brains)} mozků + 1 dělník")
+        if WORKER_MODE == "mailbox":
+            from worker_mailbox import MailboxWorker
+            self.worker = MailboxWorker(self.file_manager)
+            log_phase("complete", "orchestrator",
+                     f"Připojeno: {len(brains)} mozků + 📬 Mailbox Worker (CLI Copilot)")
+        else:
+            copilot = self.session_manager.get_worker()
+            if not copilot:
+                raise RuntimeError("Copilot není připojen! Zkontroluj cookies.")
+            self.worker = Worker(copilot, self.file_manager)
+            log_phase("complete", "orchestrator",
+                     f"Připojeno: {len(brains)} mozků + 1 dělník (Playwright)")
 
     async def run(self, task: str) -> BifrostMessage:
         """Spustí kompletní Bifrost workflow."""
