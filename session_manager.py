@@ -13,7 +13,7 @@ except ImportError:
 from utils.logger import log_phase, log_error
 from utils.rate_limiter import RateLimiter
 from utils.human_behavior import HumanBehavior
-from config import MODELS, CHROMIUM_PATH
+from config import MODELS, CHROMIUM_PATH, BROWSER_STARTUP_DELAY
 
 
 class AISession:
@@ -188,11 +188,13 @@ class SessionManager:
         self.playwright = None
 
     async def initialize(self):
-        """Spustí Playwright a připojí všechny modely."""
+        """Spustí Playwright a připojí všechny modely — sekvenčně s pauzou (Termux RAM)."""
         pw = await async_playwright().start()
         self.playwright = pw
 
-        for model_key, model_config in MODELS.items():
+        model_keys = list(MODELS.keys())
+        for i, model_key in enumerate(model_keys):
+            model_config = MODELS[model_key]
             if not Path(model_config["cookies"]).exists():
                 log_error("session_manager",
                          f"Cookies nenalezeny pro {model_key}, přeskakuji")
@@ -205,6 +207,12 @@ class SessionManager:
             except Exception as e:
                 log_error("session_manager",
                          f"Nelze připojit {model_key}: {e}")
+
+            # Pauza mezi starty — Termux na telefonu nezvládne všechny naráz
+            if i < len(model_keys) - 1:
+                log_phase("worker_build", "session_manager",
+                         f"⏳ Čekám {BROWSER_STARTUP_DELAY}s před dalším browserem...")
+                await asyncio.sleep(BROWSER_STARTUP_DELAY)
 
     def get_brains(self) -> list[AISession]:
         return [s for s in self.sessions.values() if s.role == "brain"]
