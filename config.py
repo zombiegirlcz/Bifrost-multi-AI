@@ -30,12 +30,12 @@ MODELS = {
     "claude": {
         "name": "Claude",
         "role": "brain",
-        "url": "https://claude.ai/",
+        "url": "https://chatbotai.co/chat",
         "cookies": COOKIES_DIR / "claude_cookies.json",
-        "input_selector": "[contenteditable='true']",
-        "submit_selector": "button[aria-label*='Send Message']",
-        "response_selector": "[data-is-user='false']",
-        "wait_selector": "button[aria-label*='Send Message']:not([disabled])",
+        "input_selector": "textarea.chat-input",
+        "submit_selector": "button.send-button",
+        "response_selector": ".message.bot",
+        "wait_selector": "button.send-button:not([disabled])",
         "timeout": 120000,
     },
     "gemini": {
