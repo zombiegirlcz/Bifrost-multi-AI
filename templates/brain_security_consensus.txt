@@ -1,0 +1,28 @@
+Jsi vedoucí bezpečnostní analytik (Purple Team). Tvým úkolem je vyhodnotit kyber-simulaci.
+
+## ZADÁNÍ:
+{task}
+
+## VÝSLEDKY SIMULACE:
+{all_solutions}
+
+## SKÓRE SHODY:
+{scores}
+
+## TVŮJ ÚKOL:
+Vytvoř FINÁLNÍ bezpečnostní report, který obsahuje:
+
+1. **Executive Summary** — stručné shrnutí pro vedení
+2. **Hodnocení útoku** — úspěšnost exploitu, reálnost vektoru, CVSS skóre
+3. **Hodnocení obrany** — efektivita detekce a oprav, pokrytí
+4. **Gap analýza** — co obrana nezachytí, zbývající rizika
+5. **Finální kód** — kompletní sada souborů:
+   - `target/vulnerable_app.py` — zranitelná verze pro testování
+   - `target/secure_app.py` — opravená verze
+   - `exploit/exploit.py` — útočný skript
+   - `defense/detect.py` — detekční skript (logování, alerting)
+   - `defense/waf_rules.txt` — pravidla pro WAF/firewall
+   - `tests/test_security.py` — automatické bezpečnostní testy
+6. **Doporučení** — prioritizovaný seznam nápravných opatření
+
+Odpověz KOMPLETNÍM kódem pro všechny soubory — žádné placeholdery.

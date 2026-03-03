@@ -17,20 +17,23 @@ print("""
 
 Vybrat si režim:
 
-  1️⃣  MAILBOX (Ja sam dělam) — nejrychlejší, bez Playwright
+  1️⃣  CODING MAILBOX (Ja sam dělam) — nejrychlejší
       python main.py --task "Vytvoř kalkulačku"
 
-  2️⃣  INTERACTIVE (Ty si dělník) — ty dokonči úkol
+  2️⃣  CODING INTERACTIVE (Ty si dělník)
       Terminál A: python main.py --task "..."
       Terminál B: python copilot_executor.py --list
 
-  3️⃣  DEMO (test)
+  3️⃣  🛡️ SECURITY (Red/Blue/Purple Team kyber-simulace)
+      python main.py --mode security --task "Simuluj SQL Injection"
+
+  4️⃣  DEMO (test)
       python main.py --task "Vypočítej faktoriál 5" --worker mailbox
 
 ────────────────────────────────────────────────────────────────
 """)
 
-choice = input("Vyber (1/2/3/demo): ").strip().lower()
+choice = input("Vyber (1/2/3/4/demo): ").strip().lower()
 
 if choice == "1" or choice == "mailbox":
     task = input("Zadej úkol: ").strip() or "Vytvoř jednoduchou kalkulačku v Pythonu"
@@ -44,7 +47,14 @@ elif choice == "2" or choice == "interactive":
     print("Poznámka: Spusť v dvou terminálech paralelně!\n")
     subprocess.run([sys.executable, "main.py", "--task", task])
 
-elif choice == "3" or choice == "demo":
+elif choice == "3" or choice == "security":
+    task = input("Zadej bezpečnostní úkol (SQL Injection, XSS, Brute Force): ").strip() \
+        or "Simuluj SQL Injection na přihlašovací formulář"
+    print(f"\n▶ Spouštím SECURITY MODE: python main.py --mode security --task '{task}'\n")
+    subprocess.run([sys.executable, "main.py", "--mode", "security", "--task", task,
+                   "--worker", "mailbox"])
+
+elif choice == "4" or choice == "demo":
     print("\n▶ Spouštím DEMO s jednoduchým úkolem...\n")
     subprocess.run([sys.executable, "main.py", 
                    "--task", "Vypočítej součet čísel 1 až 10",

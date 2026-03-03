@@ -16,8 +16,11 @@ from utils.logger import log_banner, log_phase, log_error, console
 @click.option("--worker", "-w", default="mailbox",
               type=click.Choice(["mailbox", "playwright"]),
               help="Worker: mailbox (CLI Copilot) nebo playwright (web automation)")
+@click.option("--mode", "-m", default="coding",
+              type=click.Choice(["coding", "security"]),
+              help="Režim: coding (development) nebo security (kyber-simulace)")
 @click.option("--verbose", "-v", is_flag=True, help="Podrobný výstup")
-def main(task: str, rounds: int, max_fix: int, worker: str, verbose: bool):
+def main(task: str, rounds: int, max_fix: int, worker: str, mode: str, verbose: bool):
     """🌈 Bifrost 2.0 — Spusť svůj AI vývojový tým."""
 
     import config
@@ -26,12 +29,19 @@ def main(task: str, rounds: int, max_fix: int, worker: str, verbose: bool):
     if max_fix != 5:
         config.MAX_FIX_ITERATIONS = max_fix
     config.WORKER_MODE = worker
+    config.SECURITY_MODE = (mode == "security")
 
     asyncio.run(run_bifrost(task, verbose))
 
 
 async def run_bifrost(task: str, verbose: bool):
-    orchestrator = Orchestrator()
+    import config
+    
+    if config.SECURITY_MODE:
+        from security_orchestrator import SecurityOrchestrator
+        orchestrator = SecurityOrchestrator()
+    else:
+        orchestrator = Orchestrator()
 
     try:
         await orchestrator.initialize()

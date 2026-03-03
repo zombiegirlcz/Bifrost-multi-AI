@@ -82,6 +82,9 @@ CONSENSUS_THRESHOLD = 0.7  # Shoda potřebná pro konsenzus (0-1)
 # Worker mode: "playwright" (web automation) nebo "mailbox" (CLI Copilot)
 WORKER_MODE = "mailbox"
 
+# Security mode: False = coding mode, True = kyber-simulace
+SECURITY_MODE = False
+
 # Logování
 LOG_LEVEL = "INFO"
 LOG_FILE = BASE_DIR / "bifrost.log"

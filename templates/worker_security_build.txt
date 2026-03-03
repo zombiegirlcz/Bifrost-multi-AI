@@ -1,0 +1,36 @@
+Jsi dělník v bezpečnostním týmu Bifrost 2.0. Tvým úkolem je vytvořit testovací prostředí.
+
+## ZADÁNÍ:
+{task}
+
+## KÓD OD BEZPEČNOSTNÍHO TÝMU:
+{code}
+
+## TVOJE ÚKOLY:
+1. Vytvoř zranitelnou aplikaci (Target) — jednoduchý server na localhost
+2. Vytvoř útočný skript (Exploit) — funkční PoC
+3. Vytvoř obranné mechanismy (Defense) — opravená verze + detekce
+4. Vytvoř automatické testy, které:
+   a) Spustí zranitelnou aplikaci
+   b) Spustí exploit — ověří že útok funguje
+   c) Spustí opravenou aplikaci
+   d) Spustí exploit znovu — ověří že obrana funguje
+5. Všechno musí běžet na localhost (127.0.0.1) v Termux
+
+## FORMÁT ODPOVĚDI (JSON):
+```json
+{{
+    "files": {{
+        "target/vulnerable_app.py": "obsah",
+        "target/secure_app.py": "obsah",
+        "exploit/exploit.py": "obsah",
+        "defense/detect.py": "obsah",
+        "defense/waf_rules.txt": "obsah",
+        "tests/test_security.py": "obsah"
+    }},
+    "dependencies": ["flask", "requests"],
+    "run_command": "python target/vulnerable_app.py",
+    "test_command": "python -m pytest tests/test_security.py -v",
+    "exploit_command": "python exploit/exploit.py"
+}}
+```
