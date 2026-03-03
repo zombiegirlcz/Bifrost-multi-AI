@@ -77,7 +77,7 @@ MODELS = {
 BRAIN_ROUNDS = 3          # Počet kol debaty mezi mozky
 MAX_FIX_ITERATIONS = 5    # Max pokusů o opravu chyb
 RATE_LIMIT_DELAY = 3.0    # Sekundy mezi requesty na stejný model
-BROWSER_STARTUP_DELAY = 10  # Sekundy pauzy mezi spuštěním každého browseru (Termux šetření RAM)
+BROWSER_STARTUP_DELAY = 30  # Sekundy pauzy mezi spuštěním každého browseru (Termux šetření RAM)
 CONSENSUS_THRESHOLD = 0.7  # Shoda potřebná pro konsenzus (0-1)
 
 # Worker mode: "playwright" (web automation) nebo "mailbox" (CLI Copilot)

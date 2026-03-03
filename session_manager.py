@@ -64,7 +64,7 @@ class AISession:
                 await self.context.add_cookies(cookies)
 
             self.page = await self.context.new_page()
-            await self.page.goto(self.config["url"], wait_until="networkidle")
+            await self.page.goto(self.config["url"], wait_until="domcontentloaded", timeout=240000)
             
             # Inicializuj HumanBehavior
             self.human = HumanBehavior(self.page)
