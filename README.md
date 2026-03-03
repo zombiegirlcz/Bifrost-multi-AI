@@ -20,9 +20,8 @@ Exportuj cookies z prohlížeče (např. pomocí rozšíření "Cookie Editor"):
 1. `cookies/chatgpt_cookies.json`
 2. `cookies/claude_cookies.json`
 3. `cookies/gemini_cookies.json`
-4. `cookies/copilot_cookies.json`
 
-Formát: JSON pole cookies z prohlížeče.
+Formát: JSON pole cookies z prohlížeče. Detaily viz `cookies/README.md`.
 
 ## 📝 Použití
 
