@@ -58,7 +58,10 @@ class AISession:
                 await self.context.add_cookies(cookies)
 
             self.page = await self.context.new_page()
+            log_phase("worker_build", self.model_key,
+                     f"📡 Načítám {self.config['url']} (timeout 4min)...")
             await self.page.goto(self.config["url"], wait_until="domcontentloaded", timeout=240000)
+            log_phase("worker_build", self.model_key, "📄 Stránka načtena")
 
             # Post-connect akce (dismiss popup, výběr modelu)
             post = self.config.get("post_connect", {})
@@ -259,10 +262,25 @@ class SessionManager:
         model_keys = list(MODELS.keys())
         for i, model_key in enumerate(model_keys):
             model_config = MODELS[model_key]
-            if not Path(model_config["cookies"]).exists():
+
+            # Přeskoč modely bez cookies nebo s prázdnými cookies
+            cookies_path = Path(model_config["cookies"])
+            if not cookies_path.exists():
                 log_error("session_manager",
                          f"Cookies nenalezeny pro {model_key}, přeskakuji")
                 continue
+            try:
+                with open(cookies_path) as f:
+                    cookie_data = json.load(f)
+                if not cookie_data:
+                    log_phase("worker_build", "session_manager",
+                             f"⏭️  {model_key}: prázdné cookies, přeskakuji")
+                    continue
+            except Exception:
+                continue
+
+            log_phase("worker_build", "session_manager",
+                     f"🔌 Připojuji {model_config['name']} ({model_config['url']})...")
 
             session = AISession(model_key, self.rate_limiter)
             try:
