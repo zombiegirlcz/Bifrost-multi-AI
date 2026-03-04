@@ -93,7 +93,7 @@ class MonicaMultiSession:
         log_phase("worker_build", "monica", "📐 Layout: 3 sloupce")
 
     async def _configure_panels(self):
-        """Nastaví správný model v každém panelu."""
+        """Nastaví správný model v každém panelu (s fallbackem na free tier)."""
         for key, panel_cfg in MONICA_PANELS.items():
             i = panel_cfg["panel_index"]
             label = panel_cfg["model_label"]
@@ -103,14 +103,24 @@ class MonicaMultiSession:
                 f"{self._sel['panel']} {self._sel['panel_title']}").nth(i).click()
             await asyncio.sleep(2)
 
-            # Vyber model v dropdownu
-            await self.page.locator(
-                self._sel["model_dropdown"]).filter(has_text=label).first.click()
+            # Zkus premium model, fallback na free
+            item = self.page.locator(
+                self._sel["model_dropdown"]).filter(has_text=label).first
+            try:
+                await item.click(timeout=3000)
+                selected = label
+            except Exception:
+                fallback = panel_cfg.get("fallback_label", label)
+                log_phase("worker_build", "monica",
+                          f"  ⚠️ {label} nedostupný, zkouším {fallback}")
+                await self.page.locator(
+                    self._sel["model_dropdown"]).filter(has_text=fallback).first.click()
+                selected = fallback
             await asyncio.sleep(1.5)
 
-            self.panel_models[key] = panel_cfg
+            self.panel_models[key] = {**panel_cfg, "active_model": selected}
             log_phase("worker_build", "monica",
-                      f"  🧠 Panel {i}: {label} ({panel_cfg['role']})")
+                      f"  🧠 Panel {i}: {selected} ({panel_cfg['role']})")
 
     async def send_to_all(self, message: str) -> dict[str, str]:
         """Pošle zprávu globálním inputem → čte odpovědi ze všech 3 panelů."""
@@ -129,10 +139,53 @@ class MonicaMultiSession:
         await asyncio.sleep(random.uniform(0.3, 0.8))
         await textarea.press("Enter")
 
-        log_phase("brain_round", "monica", f"📤 Odesláno ({len(message)} znaků)")
+        log_phase("brain_round", "monica", f"📤 Odesláno všem ({len(message)} znaků)")
 
         # Čekej na odpovědi ze všech panelů
         responses = await self._wait_all_responses(before_snapshot)
+        return responses
+
+    async def send_per_panel(self, messages: dict[str, str]) -> dict[str, str]:
+        """Pošle RŮZNÉ zprávy do jednotlivých panelů přes per-panel inputy.
+        
+        messages: dict {key: prompt} kde key = "claude"/"gemini"/"gpt"
+        """
+        if not self.is_connected:
+            raise ConnectionError("Monica není připojena")
+
+        if self.human:
+            await self.human.anti_detection_routine()
+
+        before_snapshot = await self._snapshot_panels()
+        panel_sel = self._sel["panel"]
+        input_sel = self._sel["panel_input"]
+        send_sel = self._sel["panel_send"]
+
+        # Pošli zprávu do každého panelu individuálně
+        for key, msg in messages.items():
+            cfg = MONICA_PANELS.get(key)
+            if not cfg:
+                continue
+            idx = cfg["panel_index"]
+
+            # Per-panel input + send
+            panel_input = self.page.locator(
+                f"{panel_sel} {input_sel}").nth(idx)
+            panel_send = self.page.locator(
+                f"{panel_sel} {send_sel}").nth(idx)
+
+            await panel_input.fill(msg)
+            await asyncio.sleep(random.uniform(0.2, 0.5))
+            await panel_send.click()
+            await asyncio.sleep(0.5)
+
+            role = cfg["role"]
+            log_phase("brain_round", key,
+                      f"📤 [{role}] individuální prompt ({len(msg)} znaků)")
+
+        # Čekej na odpovědi ze všech panelů, kterým jsme poslali
+        responses = await self._wait_all_responses(
+            before_snapshot, expected_keys=set(messages.keys()))
         return responses
 
     async def _snapshot_panels(self) -> dict[str, int]:
@@ -146,9 +199,12 @@ class MonicaMultiSession:
             return snapshot;
         }""")
 
-    async def _wait_all_responses(self, before: dict) -> dict[str, str]:
+    async def _wait_all_responses(self, before: dict,
+                                    expected_keys: set | None = None) -> dict[str, str]:
         """Polluje panely, dokud všechny nemají nový obsah."""
         panel_sel = self._sel["panel"]
+        target_panels = {k: v for k, v in MONICA_PANELS.items()
+                         if expected_keys is None or k in expected_keys}
         responses = {}
         elapsed = 0
 
@@ -170,7 +226,7 @@ class MonicaMultiSession:
             }""", panel_sel)
 
             done_count = 0
-            for key, cfg in MONICA_PANELS.items():
+            for key, cfg in target_panels.items():
                 idx = str(cfg["panel_index"])
                 panel_data = status.get(idx, {})
                 body_len = panel_data.get("bodyLen", 0)
@@ -178,26 +234,27 @@ class MonicaMultiSession:
 
                 if body_len > before_len + 5:
                     body = panel_data.get("body", "")
-                    # Odstraň echo promptu z odpovědi
                     lines = body.split("\n")
                     clean_lines = []
+                    active = self.panel_models.get(key, cfg)
+                    active_label = active.get("active_model", cfg["model_label"])
                     for line in lines:
                         stripped = line.strip()
-                        if stripped and stripped != cfg["model_label"]:
+                        if stripped and stripped != active_label:
                             clean_lines.append(stripped)
                     responses[key] = "\n".join(clean_lines)
                     done_count += 1
 
-            if done_count >= len(MONICA_PANELS):
+            if done_count >= len(target_panels):
                 log_phase("brain_round", "monica",
-                          f"✅ Všechny 3 mozky odpověděly ({elapsed}s)")
+                          f"✅ {done_count} mozků odpovědělo ({elapsed}s)")
                 return responses
 
             log_phase("brain_round", "monica",
-                      f"  ⏳ {done_count}/{len(MONICA_PANELS)} panelů ({elapsed}s)")
+                      f"  ⏳ {done_count}/{len(target_panels)} panelů ({elapsed}s)")
 
         # Timeout — vrať co máme
-        for key, cfg in MONICA_PANELS.items():
+        for key, cfg in target_panels.items():
             if key not in responses:
                 responses[key] = f"[TIMEOUT] {cfg['model_label']} neodpověděl"
                 log_error("monica", f"⏰ {cfg['model_label']} timeout po {RESPONSE_MAX_WAIT}s")

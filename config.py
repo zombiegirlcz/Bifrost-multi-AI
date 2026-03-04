@@ -29,26 +29,31 @@ MONICA_SELECTORS = {
     "model_dropdown":   ".dropdown-menu-item--QeH1L",
     "global_input":     ".footer--eDFl6 textarea",
     "global_send":      ".footer--eDFl6 svg.icon--R8Ygf",
+    "panel_input":      "input.input--lwUSZ",   # per-panel input ("Odeslat komu X")
+    "panel_send":       "svg.icon--R8Ygf",      # per-panel send button
 }
 
 # Tři mozky — role + model v Monica dropdownu
-# Architekt = Claude, Kreativní = Gemini, Kritik = GPT
+# Architekt = Claude Opus, Kreativní = Gemini, Kritik = GPT
 MONICA_PANELS = {
     "claude": {
         "role": "architekt",
-        "model_label": "Claude 4.5 Haiku",  # free tier (premium: Claude 4.6 Opus)
+        "model_label": "Claude 4.6 Opus",   # premium ⚡
+        "fallback_label": "Claude 4.5 Haiku",  # free fallback
         "panel_index": 0,
         "system_prefix": "Jsi hlavní architekt. Navrhuj čistý, udržitelný kód.",
     },
     "gemini": {
         "role": "kreativní",
         "model_label": "Gemini 3 Flash",
+        "fallback_label": "Gemini 3 Flash",
         "panel_index": 1,
         "system_prefix": "Jsi kreativní myslitel. Hledej neotřelá, inovativní řešení.",
     },
     "gpt": {
         "role": "kritik",
-        "model_label": "GPT-4o mini",  # free tier (premium: GPT-5.2)
+        "model_label": "GPT-5.2",           # premium ⚡
+        "fallback_label": "GPT-4o mini",       # free fallback
         "panel_index": 2,
         "system_prefix": "Jsi kritik. Hledej chyby, edge-casy a bezpečnostní díry.",
     },

@@ -7,7 +7,7 @@ from config import MONICA_PANELS, MONICA_SELECTORS
 def test_monica_panels_config():
     """Ověří, že MONICA_PANELS má správnou strukturu."""
     assert len(MONICA_PANELS) == 3
-    required_keys = {"role", "model_label", "panel_index", "system_prefix"}
+    required_keys = {"role", "model_label", "fallback_label", "panel_index", "system_prefix"}
     for key, panel in MONICA_PANELS.items():
         assert key in ("claude", "gemini", "gpt")
         assert required_keys.issubset(panel.keys()), f"Missing keys in {key}"
@@ -16,7 +16,7 @@ def test_monica_panels_config():
 def test_monica_selectors():
     """Ověří, že všechny CSS selektory jsou definovány."""
     required = ["layout_icons", "panel", "panel_title", "model_dropdown",
-                "global_input", "global_send"]
+                "global_input", "global_send", "panel_input", "panel_send"]
     for sel in required:
         assert sel in MONICA_SELECTORS, f"Missing selector: {sel}"
 

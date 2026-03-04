@@ -64,26 +64,38 @@ class BrainCouncil:
                 source=key, content=response, round_number=1))
 
     async def _round_review(self, task: str, round_num: int):
-        """Kola 2+: Pošle review prompt se všemi řešeními → každý vylepší."""
+        """Kola 2+: Každý mozek dostane JINÝ prompt podle role (per-panel)."""
         log_phase("brain_review", "orchestrator",
-                 f"Kolo {round_num}: Vzájemné review")
+                 f"Kolo {round_num}: Vzájemné review (per-panel)")
 
         template = load_template("brain_review.txt")
 
-        # Sestav review prompt — každý vidí řešení všech
         all_solutions = "\n\n---\n\n".join(
             f"### {MONICA_PANELS[k]['model_label']} ({MONICA_PANELS[k]['role']}):\n"
             f"```\n{v}\n```"
             for k, v in self.solutions.items()
         )
 
-        prompt = (template
-                 .replace("{task}", task)
-                 .replace("{other_solutions}", all_solutions)
-                 .replace("{own_solution}", "")
-                 .replace("{round}", str(round_num)))
+        # Každý mozek dostane jiný prompt podle role
+        per_panel = {}
+        for key, cfg in MONICA_PANELS.items():
+            own = self.solutions.get(key, "")
+            others = "\n\n---\n\n".join(
+                f"### {MONICA_PANELS[k]['model_label']} ({MONICA_PANELS[k]['role']}):\n"
+                f"```\n{v}\n```"
+                for k, v in self.solutions.items() if k != key
+            )
+            role_prompt = cfg["system_prefix"]
+            per_panel[key] = (
+                f"[{cfg['role'].upper()}] {role_prompt}\n\n"
+                + template
+                    .replace("{task}", task)
+                    .replace("{other_solutions}", others)
+                    .replace("{own_solution}", own)
+                    .replace("{round}", str(round_num))
+            )
 
-        responses = await self.monica.send_to_all(prompt)
+        responses = await self.monica.send_per_panel(per_panel)
 
         for key, response in responses.items():
             old = self.solutions.get(key, "")
