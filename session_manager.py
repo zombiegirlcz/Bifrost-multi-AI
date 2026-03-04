@@ -1,5 +1,6 @@
 """
 Bifrost 2.0 — Správa Playwright sessions pro AI modely
+Architektura: 1 sdílený browser, každý model = vlastní context + page (šetří RAM)
 """
 import json
 import asyncio
@@ -23,21 +24,14 @@ class AISession:
         self.name = self.config["name"]
         self.role = self.config["role"]
         self.rate_limiter = rate_limiter
-        self.browser: Browser | None = None
         self.context: BrowserContext | None = None
         self.page: Page | None = None
         self.is_connected = False
         self.human: HumanBehavior | None = None
 
-    async def connect(self, playwright):
-        """Inicializuje browser session s cookies."""
+    async def connect(self, browser: Browser):
+        """Inicializuje context + page ve sdíleném browseru."""
         try:
-            self.browser = await playwright.firefox.launch(
-                executable_path=BROWSER_PATH,
-                headless=True,
-                args=["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"]
-            )
-
             # Načti cookies
             cookies = []
             cookies_path = self.config["cookies"]
@@ -45,14 +39,14 @@ class AISession:
                 with open(cookies_path, "r") as f:
                     cookies = json.load(f)
                 # Runtime sanitizace — Playwright vyžaduje sameSite jako "Strict"|"Lax"|"None"
-                for c in cookies:
+                for c in list(cookies):
                     if "sameSite" in c:
                         if c["sameSite"] is None:
                             del c["sameSite"]
                         elif c["sameSite"] not in ("Strict", "Lax", "None"):
                             del c["sameSite"]
 
-            self.context = await self.browser.new_context(
+            self.context = await browser.new_context(
                 user_agent=(
                     "Mozilla/5.0 (Linux; Android 13) "
                     "AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -65,18 +59,16 @@ class AISession:
 
             self.page = await self.context.new_page()
             await self.page.goto(self.config["url"], wait_until="domcontentloaded", timeout=240000)
-            
+
             # Post-connect akce (dismiss popup, výběr modelu)
             post = self.config.get("post_connect", {})
             if post:
                 await self._post_connect(post)
-            
+
             # Inicializuj HumanBehavior
             self.human = HumanBehavior(self.page)
-            
-            # Urči si lidi s anti-detection routinou
             await self.human.anti_detection_routine()
-            
+
             self.is_connected = True
             log_phase("worker_build", self.model_key, f"Session připojena: {self.name}")
 
@@ -232,25 +224,37 @@ class AISession:
         raise TimeoutError(f"{self.name} neodpověděl v časovém limitu")
 
     async def disconnect(self):
-        """Uklidí session."""
-        if self.browser:
-            await self.browser.close()
+        """Uklidí context (browser zůstává — sdílený)."""
+        if self.context:
+            await self.context.close()
         self.is_connected = False
         log_phase("complete", self.model_key, f"Session ukončena: {self.name}")
 
 
 class SessionManager:
-    """Spravuje všechny AI sessions."""
+    """Spravuje všechny AI sessions. 1 browser, N contextů."""
 
     def __init__(self):
         self.rate_limiter = RateLimiter()
         self.sessions: dict[str, AISession] = {}
         self.playwright = None
+        self.browser: Browser | None = None
 
     async def initialize(self):
-        """Spustí Playwright a připojí všechny modely — sekvenčně s pauzou (Termux RAM)."""
+        """Spustí 1 Chromium a postupně připojí modely."""
         pw = await async_playwright().start()
         self.playwright = pw
+
+        log_phase("worker_build", "session_manager", "🚀 Spouštím sdílený Chromium...")
+        self.browser = await pw.chromium.launch(
+            executable_path=BROWSER_PATH,
+            headless=True,
+            args=["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
+                  "--disable-extensions", "--disable-background-networking",
+                  "--disable-sync", "--disable-translate",
+                  "--no-first-run", "--disable-default-apps"]
+        )
+        log_phase("worker_build", "session_manager", "✅ Chromium běží")
 
         model_keys = list(MODELS.keys())
         for i, model_key in enumerate(model_keys):
@@ -262,16 +266,16 @@ class SessionManager:
 
             session = AISession(model_key, self.rate_limiter)
             try:
-                await session.connect(pw)
+                await session.connect(self.browser)
                 self.sessions[model_key] = session
             except Exception as e:
                 log_error("session_manager",
                          f"Nelze připojit {model_key}: {e}")
 
-            # Pauza mezi starty — Termux na telefonu nezvládne všechny naráz
+            # Pauza mezi contexty — šetříme RAM na Termuxu
             if i < len(model_keys) - 1:
                 log_phase("worker_build", "session_manager",
-                         f"⏳ Čekám {BROWSER_STARTUP_DELAY}s před dalším browserem...")
+                         f"⏳ Čekám {BROWSER_STARTUP_DELAY}s před dalším modelem...")
                 await asyncio.sleep(BROWSER_STARTUP_DELAY)
 
     def get_brains(self) -> list[AISession]:
@@ -284,5 +288,7 @@ class SessionManager:
     async def shutdown(self):
         for session in self.sessions.values():
             await session.disconnect()
+        if self.browser:
+            await self.browser.close()
         if self.playwright:
             await self.playwright.stop()
