@@ -79,6 +79,9 @@ class MonicaMultiSession:
         # Nastav modely v panelech
         await self._configure_panels()
 
+        # Finální dismiss — zavři cokoliv co zbylo
+        await self._dismiss_overlays()
+
         self.human = HumanBehavior(self.page)
         self.is_connected = True
         models_str = " | ".join(
@@ -92,11 +95,37 @@ class MonicaMultiSession:
         await asyncio.sleep(3)
         log_phase("worker_build", "monica", "📐 Layout: 3 sloupce")
 
+    async def _dismiss_overlays(self):
+        """Zavře premium upsell overlay / drawer, pokud je viditelný."""
+        overlay_selectors = [
+            ".drawer-mask--od0gH",
+            ".feature-title-box--E_N7v",
+            ".ant-modal-close",
+            "[class*='close'][class*='icon']",
+        ]
+        for sel in overlay_selectors:
+            try:
+                el = self.page.locator(sel).first
+                if await el.is_visible(timeout=500):
+                    await el.click(force=True, timeout=2000)
+                    await asyncio.sleep(0.5)
+                    log_phase("worker_build", "monica",
+                              f"  🔒 Zavřen overlay: {sel}")
+            except Exception:
+                pass
+        # Zkus Escape jako univerzální dismiss
+        try:
+            await self.page.keyboard.press("Escape")
+            await asyncio.sleep(0.3)
+        except Exception:
+            pass
+
     async def _configure_panels(self):
         """Nastaví správný model v každém panelu (s fallbackem na free tier)."""
         for key, panel_cfg in MONICA_PANELS.items():
             i = panel_cfg["panel_index"]
             label = panel_cfg["model_label"]
+            fallback = panel_cfg.get("fallback_label", label)
 
             # Klikni na title panelu → otevře dropdown
             await self.page.locator(
@@ -109,14 +138,25 @@ class MonicaMultiSession:
             try:
                 await item.click(timeout=3000)
                 selected = label
+                await asyncio.sleep(1)
+                # Overlay check — premium model může vyvolat upsell
+                await self._dismiss_overlays()
             except Exception:
-                fallback = panel_cfg.get("fallback_label", label)
                 log_phase("worker_build", "monica",
                           f"  ⚠️ {label} nedostupný, zkouším {fallback}")
+                await self._dismiss_overlays()
+                # Znovu otevři dropdown pokud se zavřel
+                try:
+                    await self.page.locator(
+                        f"{self._sel['panel']} {self._sel['panel_title']}").nth(i).click()
+                    await asyncio.sleep(2)
+                except Exception:
+                    pass
                 await self.page.locator(
                     self._sel["model_dropdown"]).filter(has_text=fallback).first.click()
                 selected = fallback
             await asyncio.sleep(1.5)
+            await self._dismiss_overlays()
 
             self.panel_models[key] = {**panel_cfg, "active_model": selected}
             log_phase("worker_build", "monica",
@@ -129,6 +169,9 @@ class MonicaMultiSession:
 
         if self.human:
             await self.human.anti_detection_routine()
+
+        # Zavři případné overlays
+        await self._dismiss_overlays()
 
         # Snapshot panelů PŘED odesláním (pro detekci nových odpovědí)
         before_snapshot = await self._snapshot_panels()
@@ -156,6 +199,9 @@ class MonicaMultiSession:
         if self.human:
             await self.human.anti_detection_routine()
 
+        # Zavři případné premium overlays PŘED interakcí
+        await self._dismiss_overlays()
+
         before_snapshot = await self._snapshot_panels()
         panel_sel = self._sel["panel"]
         input_sel = self._sel["panel_input"]
@@ -168,6 +214,9 @@ class MonicaMultiSession:
                 continue
             idx = cfg["panel_index"]
 
+            # Dismiss overlay před každým panelem
+            await self._dismiss_overlays()
+
             # Per-panel input + send
             panel_input = self.page.locator(
                 f"{panel_sel} {input_sel}").nth(idx)
@@ -176,7 +225,13 @@ class MonicaMultiSession:
 
             await panel_input.fill(msg)
             await asyncio.sleep(random.uniform(0.2, 0.5))
-            await panel_send.click()
+            try:
+                await panel_send.click(timeout=5000)
+            except Exception:
+                # Overlay mohl znovu vyskočit — dismiss a retry
+                await self._dismiss_overlays()
+                await asyncio.sleep(0.5)
+                await panel_send.click(force=True, timeout=5000)
             await asyncio.sleep(0.5)
 
             role = cfg["role"]

@@ -38,8 +38,8 @@ MONICA_SELECTORS = {
 MONICA_PANELS = {
     "claude": {
         "role": "architekt",
-        "model_label": "Claude 4.6 Opus",   # premium ⚡
-        "fallback_label": "Claude 4.5 Haiku",  # free fallback
+        "model_label": "Claude 4.5 Haiku",      # free — spolehlivý
+        "fallback_label": "Claude 4.5 Haiku",
         "panel_index": 0,
         "system_prefix": "Jsi hlavní architekt. Navrhuj čistý, udržitelný kód.",
     },
@@ -52,8 +52,8 @@ MONICA_PANELS = {
     },
     "gpt": {
         "role": "kritik",
-        "model_label": "GPT-5.2",           # premium ⚡
-        "fallback_label": "GPT-4o mini",       # free fallback
+        "model_label": "GPT-4o mini",            # free — spolehlivý
+        "fallback_label": "GPT-4o mini",
         "panel_index": 2,
         "system_prefix": "Jsi kritik. Hledej chyby, edge-casy a bezpečnostní díry.",
     },
