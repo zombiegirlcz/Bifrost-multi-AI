@@ -1,6 +1,6 @@
 """
 Bifrost 2.0 — Správa Playwright sessions pro AI modely
-Architektura: 1 sdílený browser, každý model = vlastní context + page (šetří RAM)
+Architektura: Monica Multi-Chat — 1 stránka, 3 mozky paralelně
 """
 import json
 import asyncio
@@ -14,306 +14,203 @@ except ImportError:
 from utils.logger import log_phase, log_error
 from utils.rate_limiter import RateLimiter
 from utils.human_behavior import HumanBehavior
-from config import MODELS, BROWSER_PATH, BROWSER_STARTUP_DELAY
+from config import (
+    BROWSER_PATH, MONICA_URL, MONICA_COOKIES, MONICA_PANELS,
+    MONICA_SELECTORS, RESPONSE_POLL_INTERVAL, RESPONSE_MAX_WAIT,
+)
 
 
-class AISession:
-    def __init__(self, model_key: str, rate_limiter: RateLimiter):
-        self.model_key = model_key
-        self.config = MODELS[model_key]
-        self.name = self.config["name"]
-        self.role = self.config["role"]
-        self.rate_limiter = rate_limiter
-        self.context: BrowserContext | None = None
-        self.page: Page | None = None
-        self.is_connected = False
-        self.human: HumanBehavior | None = None
-
-    async def connect(self, browser: Browser):
-        """Inicializuje context + page ve sdíleném browseru."""
-        try:
-            # Načti cookies
-            cookies = []
-            cookies_path = self.config["cookies"]
-            if Path(cookies_path).exists():
-                with open(cookies_path, "r") as f:
-                    cookies = json.load(f)
-                # Runtime sanitizace — Playwright vyžaduje sameSite jako "Strict"|"Lax"|"None"
-                for c in list(cookies):
-                    if "sameSite" in c:
-                        if c["sameSite"] is None:
-                            del c["sameSite"]
-                        elif c["sameSite"] not in ("Strict", "Lax", "None"):
-                            del c["sameSite"]
-
-            self.context = await browser.new_context(
-                user_agent=(
-                    "Mozilla/5.0 (Linux; Android 13) "
-                    "AppleWebKit/537.36 (KHTML, like Gecko) "
-                    "Chrome/120.0.0.0 Mobile Safari/537.36"
-                )
-            )
-
-            if cookies:
-                await self.context.add_cookies(cookies)
-
-            self.page = await self.context.new_page()
-            log_phase("worker_build", self.model_key,
-                     f"📡 Načítám {self.config['url']} (timeout 4min)...")
-            await self.page.goto(self.config["url"], wait_until="domcontentloaded", timeout=240000)
-            log_phase("worker_build", self.model_key, "📄 Stránka načtena")
-
-            # Post-connect akce (dismiss popup, výběr modelu)
-            post = self.config.get("post_connect", {})
-            if post:
-                await self._post_connect(post)
-
-            # Inicializuj HumanBehavior
-            self.human = HumanBehavior(self.page)
-            await self.human.anti_detection_routine()
-
-            self.is_connected = True
-            log_phase("worker_build", self.model_key, f"✅ {self.name} připojen")
-
-        except Exception as e:
-            log_error(self.model_key, f"Nepodařilo se připojit: {e}")
-            self.is_connected = False
-            raise
-
-    async def _post_connect(self, post: dict):
-        """Post-connect akce: zavři popup, vyber model. Rychlé — nesekne se."""
-        # 1) Zavři payment/upgrade popup (X tlačítko v rohu)
-        if post.get("dismiss_popup"):
-            log_phase("worker_build", self.model_key, "🔍 Hledám popup...")
-            await asyncio.sleep(2)
-            popup_closed = False
-            for selector in [
-                "button.close", "button.modal-close", "[aria-label='Close']",
-                "button:has-text('×')", "button:has-text('✕')", "button:has-text('X')",
-                ".popup-close", "[data-dismiss]",
-            ]:
-                try:
-                    close_btn = await self.page.wait_for_selector(selector, timeout=1500)
-                    if close_btn:
-                        await close_btn.click()
-                        log_phase("worker_build", self.model_key, "✕ Popup zavřen")
-                        popup_closed = True
-                        await asyncio.sleep(1)
-                        break
-                except:
-                    continue
-            if not popup_closed:
-                log_phase("worker_build", self.model_key, "✓ Žádný popup")
-
-        # 2) Vyber model
-        model_name = post.get("select_model")
-        if model_name:
-            log_phase("worker_build", self.model_key, f"🔍 Hledám model selector...")
-            await asyncio.sleep(1)
-            dropdown_found = False
-            for dropdown_sel in [
-                "button.model-selector", "[class*='model-select']",
-                "button:has-text('Model')", "[class*='dropdown'] button",
-                ".model-picker", "[data-testid*='model']",
-            ]:
-                try:
-                    dropdown = await self.page.wait_for_selector(dropdown_sel, timeout=1500)
-                    if dropdown:
-                        await dropdown.click()
-                        dropdown_found = True
-                        await asyncio.sleep(1)
-                        break
-                except:
-                    continue
-
-            if dropdown_found:
-                try:
-                    model_option = await self.page.wait_for_selector(
-                        f"text='{model_name}'", timeout=3000
-                    )
-                    if model_option:
-                        await model_option.click()
-                        log_phase("worker_build", self.model_key,
-                                 f"🤖 Model vybrán: {model_name}")
-                        await asyncio.sleep(1)
-                except:
-                    log_error(self.model_key,
-                             f"Model '{model_name}' nenalezen, používám default")
-            else:
-                log_error(self.model_key, "Model dropdown nenalezen, používám default")
-
-    async def send_message(self, message: str) -> str:
-        """Pošle zprávu AI modelu a vrátí odpověď."""
-        if not self.is_connected:
-            raise ConnectionError(f"{self.name} není připojen")
-
-        await self.rate_limiter.wait(self.model_key)
-
-        try:
-            # Simuluj lidské chování PŘED komunikací
-            await self.human.anti_detection_routine()
-            
-            # Počet odpovědí PŘED odesláním
-            existing_responses = await self.page.query_selector_all(
-                self.config["response_selector"]
-            )
-            count_before = len(existing_responses)
-
-            # Vyplň input
-            input_el = await self.page.wait_for_selector(
-                self.config["input_selector"], timeout=30000
-            )
-            
-            # Klikni (někdy vicej krát, jak by dělal člověk)
-            for _ in range(random.randint(1, 2)):
-                await input_el.click()
-                await asyncio.sleep(random.uniform(0.1, 0.3))
-            
-            await input_el.fill("")
-            
-            # Piš pomalu s lidským chováním
-            if self.human:
-                await self.human.type_slowly(self.config["input_selector"], message)
-            else:
-                # Fallback - postupné psaní
-                chunks = [message[i:i+500] for i in range(0, len(message), 500)]
-                for chunk in chunks:
-                    await input_el.type(chunk, delay=5)
-                    await asyncio.sleep(0.1)
-
-            # Čekej jako by sis dumal nad zprávou
-            await self.human.think_like_human()
-
-            # Odešli
-            submit_btn = await self.page.wait_for_selector(
-                self.config["submit_selector"], timeout=10000
-            )
-            await submit_btn.click()
-
-            # Čekej na odpověď (se simulací čtení)
-            response_text = await self._wait_for_response(count_before)
-            
-            log_phase("brain_round", self.model_key, 
-                     f"Odpověď přijata ({len(response_text)} znaků)")
-            return response_text
-
-        except Exception as e:
-            log_error(self.model_key, f"Chyba při komunikaci: {e}")
-            raise
-
-    async def _wait_for_response(self, count_before: int) -> str:
-        """Čeká na novou odpověď od modelu."""
-        timeout = self.config["timeout"]
-        poll_interval = 2000  # ms
-
-        # Čekej na nový element odpovědi
-        for _ in range(timeout // poll_interval):
-            await asyncio.sleep(poll_interval / 1000)
-
-            responses = await self.page.query_selector_all(
-                self.config["response_selector"]
-            )
-
-            if len(responses) > count_before:
-                # Čekej až model dopíše (button se stane opět klikatelným)
-                try:
-                    await self.page.wait_for_selector(
-                        self.config["wait_selector"],
-                        timeout=timeout
-                    )
-                except:
-                    await asyncio.sleep(5)  # Fallback čekání
-
-                # Získej poslední odpověď
-                responses = await self.page.query_selector_all(
-                    self.config["response_selector"]
-                )
-                last_response = responses[-1]
-                return await last_response.inner_text()
-
-        raise TimeoutError(f"{self.name} neodpověděl v časovém limitu")
-
-    async def disconnect(self):
-        """Uklidí context (browser zůstává — sdílený)."""
-        if self.context:
-            await self.context.close()
-        self.is_connected = False
-        log_phase("complete", self.model_key, f"Session ukončena: {self.name}")
+def _sanitize_cookies(cookies: list[dict]) -> list[dict]:
+    """Playwright vyžaduje sameSite jako 'Strict'|'Lax'|'None' nebo klíč chybí."""
+    for c in list(cookies):
+        if "sameSite" in c:
+            if c["sameSite"] is None or c["sameSite"] not in ("Strict", "Lax", "None"):
+                del c["sameSite"]
+    return cookies
 
 
-class SessionManager:
-    """Spravuje všechny AI sessions. 1 browser, N contextů."""
+class MonicaMultiSession:
+    """1 stránka Monica.im, 3 panely = 3 AI mozky paralelně."""
 
     def __init__(self):
-        self.rate_limiter = RateLimiter()
-        self.sessions: dict[str, AISession] = {}
         self.playwright = None
         self.browser: Browser | None = None
+        self.context: BrowserContext | None = None
+        self.page: Page | None = None
+        self.human: HumanBehavior | None = None
+        self.is_connected = False
+        self.panel_models: dict[str, dict] = {}  # key → panel config
+        self._sel = MONICA_SELECTORS
 
-    async def initialize(self):
-        """Spustí 1 Chromium a postupně připojí modely."""
-        pw = await async_playwright().start()
-        self.playwright = pw
-
-        log_phase("worker_build", "session_manager", "🚀 Spouštím sdílený Chromium...")
-        self.browser = await pw.chromium.launch(
-            executable_path=BROWSER_PATH,
-            headless=True,
+    async def connect(self):
+        """Spustí Chromium, otevře Monica, nastaví 3 panely."""
+        log_phase("worker_build", "monica", "🚀 Spouštím Chromium...")
+        self.playwright = await async_playwright().start()
+        self.browser = await self.playwright.chromium.launch(
+            executable_path=BROWSER_PATH, headless=True,
             args=["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage",
                   "--disable-extensions", "--disable-background-networking",
                   "--disable-sync", "--disable-translate",
-                  "--no-first-run", "--disable-default-apps"]
-        )
-        log_phase("worker_build", "session_manager", "✅ Chromium běží")
+                  "--no-first-run", "--disable-default-apps"])
+        log_phase("worker_build", "monica", "✅ Chromium běží")
 
-        model_keys = list(MODELS.keys())
-        for i, model_key in enumerate(model_keys):
-            model_config = MODELS[model_key]
+        # Context + cookies
+        cookies = []
+        if Path(MONICA_COOKIES).exists():
+            with open(MONICA_COOKIES) as f:
+                cookies = _sanitize_cookies(json.load(f))
 
-            # Přeskoč modely bez cookies nebo s prázdnými cookies
-            cookies_path = Path(model_config["cookies"])
-            if not cookies_path.exists():
-                log_error("session_manager",
-                         f"Cookies nenalezeny pro {model_key}, přeskakuji")
-                continue
-            try:
-                with open(cookies_path) as f:
-                    cookie_data = json.load(f)
-                if not cookie_data:
-                    log_phase("worker_build", "session_manager",
-                             f"⏭️  {model_key}: prázdné cookies, přeskakuji")
-                    continue
-            except Exception:
-                continue
+        self.context = await self.browser.new_context(
+            user_agent="Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 "
+                       "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+        if cookies:
+            await self.context.add_cookies(cookies)
 
-            log_phase("worker_build", "session_manager",
-                     f"🔌 Připojuji {model_config['name']} ({model_config['url']})...")
+        self.page = await self.context.new_page()
 
-            session = AISession(model_key, self.rate_limiter)
-            try:
-                await session.connect(self.browser)
-                self.sessions[model_key] = session
-            except Exception as e:
-                log_error("session_manager",
-                         f"Nelze připojit {model_key}: {e}")
+        log_phase("worker_build", "monica", f"📡 Načítám {MONICA_URL}...")
+        await self.page.goto(MONICA_URL, wait_until="domcontentloaded", timeout=240000)
+        await asyncio.sleep(12)
+        log_phase("worker_build", "monica", "📄 Stránka načtena")
 
-            # Pauza mezi contexty — šetříme RAM na Termuxu
-            if i < len(model_keys) - 1:
-                log_phase("worker_build", "session_manager",
-                         f"⏳ Čekám {BROWSER_STARTUP_DELAY}s před dalším modelem...")
-                await asyncio.sleep(BROWSER_STARTUP_DELAY)
+        # Layout → 3 sloupce
+        await self._set_layout_3col()
 
-    def get_brains(self) -> list[AISession]:
-        return [s for s in self.sessions.values() if s.role == "brain"]
+        # Nastav modely v panelech
+        await self._configure_panels()
 
-    def get_worker(self) -> AISession | None:
-        workers = [s for s in self.sessions.values() if s.role == "worker"]
-        return workers[0] if workers else None
+        self.human = HumanBehavior(self.page)
+        self.is_connected = True
+        models_str = " | ".join(
+            f"{v['role']}={v['model_label']}" for v in MONICA_PANELS.values())
+        log_phase("worker_build", "monica", f"✅ Monica ready: {models_str}")
 
-    async def shutdown(self):
-        for session in self.sessions.values():
-            await session.disconnect()
+    async def _set_layout_3col(self):
+        """Přepne layout na 3 sloupce."""
+        idx = self._sel["layout_3col_idx"]
+        await self.page.locator(self._sel["layout_icons"]).nth(idx).click()
+        await asyncio.sleep(3)
+        log_phase("worker_build", "monica", "📐 Layout: 3 sloupce")
+
+    async def _configure_panels(self):
+        """Nastaví správný model v každém panelu."""
+        for key, panel_cfg in MONICA_PANELS.items():
+            i = panel_cfg["panel_index"]
+            label = panel_cfg["model_label"]
+
+            # Klikni na title panelu → otevře dropdown
+            await self.page.locator(
+                f"{self._sel['panel']} {self._sel['panel_title']}").nth(i).click()
+            await asyncio.sleep(2)
+
+            # Vyber model v dropdownu
+            await self.page.locator(
+                self._sel["model_dropdown"]).filter(has_text=label).first.click()
+            await asyncio.sleep(1.5)
+
+            self.panel_models[key] = panel_cfg
+            log_phase("worker_build", "monica",
+                      f"  🧠 Panel {i}: {label} ({panel_cfg['role']})")
+
+    async def send_to_all(self, message: str) -> dict[str, str]:
+        """Pošle zprávu globálním inputem → čte odpovědi ze všech 3 panelů."""
+        if not self.is_connected:
+            raise ConnectionError("Monica není připojena")
+
+        if self.human:
+            await self.human.anti_detection_routine()
+
+        # Snapshot panelů PŘED odesláním (pro detekci nových odpovědí)
+        before_snapshot = await self._snapshot_panels()
+
+        # Vyplň globální input a odešli
+        textarea = self.page.locator(self._sel["global_input"])
+        await textarea.fill(message)
+        await asyncio.sleep(random.uniform(0.3, 0.8))
+        await textarea.press("Enter")
+
+        log_phase("brain_round", "monica", f"📤 Odesláno ({len(message)} znaků)")
+
+        # Čekej na odpovědi ze všech panelů
+        responses = await self._wait_all_responses(before_snapshot)
+        return responses
+
+    async def _snapshot_panels(self) -> dict[str, int]:
+        """Vrátí délku textu v každém panelu (pro detekci nového obsahu)."""
+        return await self.page.evaluate("""() => {
+            const snapshot = {};
+            const panels = document.querySelectorAll('""" + self._sel["panel"] + """');
+            for (let i = 0; i < Math.min(panels.length, 3); i++) {
+                snapshot[i] = (panels[i].innerText || '').length;
+            }
+            return snapshot;
+        }""")
+
+    async def _wait_all_responses(self, before: dict) -> dict[str, str]:
+        """Polluje panely, dokud všechny nemají nový obsah."""
+        panel_sel = self._sel["panel"]
+        responses = {}
+        elapsed = 0
+
+        while elapsed < RESPONSE_MAX_WAIT:
+            await asyncio.sleep(RESPONSE_POLL_INTERVAL)
+            elapsed += RESPONSE_POLL_INTERVAL
+
+            status = await self.page.evaluate("""(panelSel) => {
+                const results = {};
+                const panels = document.querySelectorAll(panelSel);
+                for (let i = 0; i < Math.min(panels.length, 3); i++) {
+                    const title = panels[i].querySelector('[class*="title"]')
+                                    ?.innerText?.trim() || '';
+                    const full = panels[i].innerText || '';
+                    const body = full.replace(title, '').trim();
+                    results[i] = {bodyLen: body.length, body: body};
+                }
+                return results;
+            }""", panel_sel)
+
+            done_count = 0
+            for key, cfg in MONICA_PANELS.items():
+                idx = str(cfg["panel_index"])
+                panel_data = status.get(idx, {})
+                body_len = panel_data.get("bodyLen", 0)
+                before_len = before.get(int(idx), before.get(idx, 0))
+
+                if body_len > before_len + 5:
+                    body = panel_data.get("body", "")
+                    # Odstraň echo promptu z odpovědi
+                    lines = body.split("\n")
+                    clean_lines = []
+                    for line in lines:
+                        stripped = line.strip()
+                        if stripped and stripped != cfg["model_label"]:
+                            clean_lines.append(stripped)
+                    responses[key] = "\n".join(clean_lines)
+                    done_count += 1
+
+            if done_count >= len(MONICA_PANELS):
+                log_phase("brain_round", "monica",
+                          f"✅ Všechny 3 mozky odpověděly ({elapsed}s)")
+                return responses
+
+            log_phase("brain_round", "monica",
+                      f"  ⏳ {done_count}/{len(MONICA_PANELS)} panelů ({elapsed}s)")
+
+        # Timeout — vrať co máme
+        for key, cfg in MONICA_PANELS.items():
+            if key not in responses:
+                responses[key] = f"[TIMEOUT] {cfg['model_label']} neodpověděl"
+                log_error("monica", f"⏰ {cfg['model_label']} timeout po {RESPONSE_MAX_WAIT}s")
+
+        return responses
+
+    async def disconnect(self):
+        """Uklidí vše."""
+        if self.context:
+            await self.context.close()
         if self.browser:
             await self.browser.close()
         if self.playwright:
             await self.playwright.stop()
+        self.is_connected = False
+        log_phase("complete", "monica", "Session ukončena")

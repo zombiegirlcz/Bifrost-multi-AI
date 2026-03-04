@@ -1,8 +1,9 @@
 """
 Bifrost 2.0 — Orchestrátor: řídí celý workflow
+Architektura: Monica Multi-Chat (3 mozky na 1 stránce) + Mailbox Worker
 """
 import asyncio
-from session_manager import SessionManager
+from session_manager import MonicaMultiSession
 from brain import BrainCouncil
 from worker import Worker
 from feedback_loop import FeedbackLoop
@@ -16,37 +17,27 @@ class Orchestrator:
     """Hlavní řídící jednotka Bifrost 2.0."""
 
     def __init__(self):
-        self.session_manager = SessionManager()
+        self.monica = MonicaMultiSession()
         self.file_manager = FileManager(OUTPUT_DIR)
         self.brain_council: BrainCouncil | None = None
         self.worker: Worker | None = None
 
     async def initialize(self):
-        """Inicializuje všechny komponenty."""
+        """Inicializuje Monica multi-chat + worker."""
         log_banner()
-        log_phase("worker_build", "orchestrator", "Inicializuji sessions...")
+        log_phase("worker_build", "orchestrator", "Inicializuji Monica Multi-Chat...")
 
-        await self.session_manager.initialize()
-
-        brains = self.session_manager.get_brains()
-
-        if not brains:
-            raise RuntimeError("Žádný mozek není připojen! Zkontroluj cookies.")
-
-        self.brain_council = BrainCouncil(brains)
+        await self.monica.connect()
+        self.brain_council = BrainCouncil(self.monica)
 
         if WORKER_MODE == "mailbox":
             from worker_mailbox import MailboxWorker
             self.worker = MailboxWorker(self.file_manager)
             log_phase("complete", "orchestrator",
-                     f"Připojeno: {len(brains)} mozků + 📬 Mailbox Worker (CLI Copilot)")
+                     "Připojeno: 3 mozky (Monica) + 📬 Mailbox Worker (CLI Copilot)")
         else:
-            copilot = self.session_manager.get_worker()
-            if not copilot:
-                raise RuntimeError("Copilot není připojen! Zkontroluj cookies.")
-            self.worker = Worker(copilot, self.file_manager)
             log_phase("complete", "orchestrator",
-                     f"Připojeno: {len(brains)} mozků + 1 dělník (Playwright)")
+                     "Připojeno: 3 mozky (Monica) — Worker mode: playwright N/A")
 
     async def run(self, task: str) -> BifrostMessage:
         """Spustí kompletní Bifrost workflow."""
@@ -109,7 +100,7 @@ class Orchestrator:
         return final_result
 
     async def shutdown(self):
-        await self.session_manager.shutdown()
+        await self.monica.disconnect()
 
     def _generate_report(self, task: str, result: BifrostMessage) -> str:
         status_emoji = "✅" if result.status == Status.SUCCESS else "⚠️"

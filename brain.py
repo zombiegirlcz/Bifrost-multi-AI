@@ -1,13 +1,14 @@
 """
 Bifrost 2.0 — Brain modul: debata, review, konsenzus mezi AI modely
+Používá Monica Multi-Chat — 1 stránka, 3 panely paralelně
 """
 import asyncio
 from pathlib import Path
-from session_manager import AISession
+from session_manager import MonicaMultiSession
 from protocol import BifrostMessage, Phase, Status
 from utils.logger import log_phase, log_code
 from utils.diff_viewer import show_diff, find_consensus_score
-from config import TEMPLATES_DIR, BRAIN_ROUNDS
+from config import TEMPLATES_DIR, BRAIN_ROUNDS, MONICA_PANELS
 
 
 def load_template(name: str) -> str:
@@ -18,17 +19,18 @@ def load_template(name: str) -> str:
 
 
 class BrainCouncil:
-    """Řídí debatu mezi AI mozky."""
+    """Řídí debatu mezi AI mozky přes Monica multi-chat."""
 
-    def __init__(self, brains: list[AISession]):
-        self.brains = brains
-        self.solutions: dict[str, str] = {}
+    def __init__(self, monica: MonicaMultiSession):
+        self.monica = monica
+        self.solutions: dict[str, str] = {}  # key → poslední řešení
         self.history: list[BifrostMessage] = []
 
     async def run_debate(self, task: str) -> BifrostMessage:
         """Spustí kompletní debatu — N kol."""
+        brain_count = len(MONICA_PANELS)
         log_phase("brain_round", "orchestrator",
-                 f"Zahajuji debatu — {len(self.brains)} mozky, {BRAIN_ROUNDS} kola")
+                 f"Zahajuji debatu — {brain_count} mozky, {BRAIN_ROUNDS} kola")
 
         # === KOLO 1: Nezávislé návrhy ===
         await self._round_independent(task)
@@ -42,70 +44,69 @@ class BrainCouncil:
         return final
 
     async def _round_independent(self, task: str):
-        """Kolo 1: Každý mozek nezávisle navrhne řešení."""
+        """Kolo 1: Pošle úkol globálním inputem → všichni odpoví najednou."""
         log_phase("brain_round", "orchestrator", "Kolo 1: Nezávislé návrhy")
 
         template = load_template("brain_round1.txt")
         prompt = template.replace("{task}", task)
 
-        tasks = []
-        for brain in self.brains:
-            tasks.append(self._ask_brain(brain, prompt, round_number=1))
+        responses = await self.monica.send_to_all(prompt)
 
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for key, response in responses.items():
+            self.solutions[key] = response
+            role = MONICA_PANELS[key]["role"]
+            model = MONICA_PANELS[key]["model_label"]
+            log_phase("brain_round", key,
+                     f"🧠 {model} ({role}): {len(response)} znaků")
 
-        for brain, result in zip(self.brains, results):
-            if isinstance(result, Exception):
-                log_phase("error", brain.model_key, f"Chyba: {result}")
-                self.solutions[brain.model_key] = f"ERROR: {result}"
-            else:
-                self.solutions[brain.model_key] = result
+            self.history.append(BifrostMessage(
+                phase=Phase.BRAIN_ROUND, status=Status.SUCCESS,
+                source=key, content=response, round_number=1))
 
     async def _round_review(self, task: str, round_num: int):
-        """Kola 2+: Každý mozek vidí řešení ostatních a vylepšuje své."""
+        """Kola 2+: Pošle review prompt se všemi řešeními → každý vylepší."""
         log_phase("brain_review", "orchestrator",
                  f"Kolo {round_num}: Vzájemné review")
 
         template = load_template("brain_review.txt")
-        tasks = []
 
-        for brain in self.brains:
-            other_solutions = "\n\n---\n\n".join(
-                f"### {k.upper()}:\n```\n{v}\n```"
-                for k, v in self.solutions.items()
-                if k != brain.model_key
-            )
+        # Sestav review prompt — každý vidí řešení všech
+        all_solutions = "\n\n---\n\n".join(
+            f"### {MONICA_PANELS[k]['model_label']} ({MONICA_PANELS[k]['role']}):\n"
+            f"```\n{v}\n```"
+            for k, v in self.solutions.items()
+        )
 
-            prompt = (template
-                     .replace("{task}", task)
-                     .replace("{other_solutions}", other_solutions)
-                     .replace("{own_solution}", self.solutions.get(brain.model_key, ""))
-                     .replace("{round}", str(round_num)))
+        prompt = (template
+                 .replace("{task}", task)
+                 .replace("{other_solutions}", all_solutions)
+                 .replace("{own_solution}", "")
+                 .replace("{round}", str(round_num)))
 
-            tasks.append(self._ask_brain(brain, prompt, round_number=round_num))
+        responses = await self.monica.send_to_all(prompt)
 
-        results = await asyncio.gather(*tasks, return_exceptions=True)
+        for key, response in responses.items():
+            old = self.solutions.get(key, "")
+            self.solutions[key] = response
+            model = MONICA_PANELS[key]["model_label"]
+            show_diff(old, response,
+                     title=f"{model} — Kolo {round_num}")
 
-        for brain, result in zip(self.brains, results):
-            if isinstance(result, Exception):
-                log_phase("error", brain.model_key, f"Chyba v kole {round_num}: {result}")
-            else:
-                old = self.solutions.get(brain.model_key, "")
-                self.solutions[brain.model_key] = result
-                show_diff(old, result, title=f"{brain.name} — Kolo {round_num}")
+            self.history.append(BifrostMessage(
+                phase=Phase.BRAIN_ROUND, status=Status.SUCCESS,
+                source=key, content=response, round_number=round_num))
 
     async def _build_consensus(self, task: str) -> BifrostMessage:
-        """Finální kolo: vyber nejlepší části a sestav finální kód."""
+        """Finální kolo: sestav konsenzus z řešení všech mozků."""
         log_phase("brain_consensus", "orchestrator", "Sestavuji konsenzus")
 
-        # Spočítej podobnost
         scores = find_consensus_score(self.solutions)
-        log_phase("brain_consensus", "orchestrator",
-                 f"Skóre shody: {scores}")
+        log_phase("brain_consensus", "orchestrator", f"Skóre shody: {scores}")
 
         template = load_template("brain_consensus.txt")
         all_solutions = "\n\n===\n\n".join(
-            f"### {k.upper()} — FINÁLNÍ VERZE:\n```\n{v}\n```"
+            f"### {MONICA_PANELS[k]['model_label']} ({MONICA_PANELS[k]['role']}) — FINÁLNÍ:\n"
+            f"```\n{v}\n```"
             for k, v in self.solutions.items()
         )
 
@@ -114,9 +115,10 @@ class BrainCouncil:
                  .replace("{all_solutions}", all_solutions)
                  .replace("{scores}", str(scores)))
 
-        # Použij prvního mozka pro finální merge
-        lead_brain = self.brains[0]
-        consensus_code = await lead_brain.send_message(prompt)
+        # Pošli konsenzus prompt → architekt (Claude) odpovídá jako vedoucí
+        responses = await self.monica.send_to_all(prompt)
+        lead_key = "claude"
+        consensus_code = responses.get(lead_key, list(responses.values())[0])
 
         log_code(consensus_code, title="🤝 Konsenzuální kód")
 
@@ -128,18 +130,3 @@ class BrainCouncil:
             round_number=BRAIN_ROUNDS,
             metadata={"consensus_scores": scores}
         )
-
-    async def _ask_brain(self, brain: AISession, prompt: str,
-                         round_number: int) -> str:
-        """Pošle prompt mozku a zaznamená do historie."""
-        response = await brain.send_message(prompt)
-
-        msg = BifrostMessage(
-            phase=Phase.BRAIN_ROUND,
-            status=Status.SUCCESS,
-            source=brain.model_key,
-            content=response,
-            round_number=round_number
-        )
-        self.history.append(msg)
-        return response

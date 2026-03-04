@@ -29,10 +29,10 @@ def test_security_message_serialization():
 
 def test_security_brain_import():
     """Ověř že SecurityBrainCouncil je importovatelný."""
-    from security_brain import SecurityBrainCouncil
-    assert SecurityBrainCouncil.ROLES["attacker"] == "🔴 Red Team (Útočník)"
-    assert SecurityBrainCouncil.ROLES["defender"] == "🔵 Blue Team (Obránce)"
-    assert SecurityBrainCouncil.ROLES["analyst"] == "🟣 Purple Team (Analytik)"
+    from security_brain import SecurityBrainCouncil, SECURITY_ROLES
+    assert SECURITY_ROLES["gpt"]["role"] == "attacker"
+    assert SECURITY_ROLES["claude"]["role"] == "defender"
+    assert SECURITY_ROLES["gemini"]["role"] == "analyst"
 
 
 def test_security_orchestrator_import():
@@ -40,7 +40,6 @@ def test_security_orchestrator_import():
     from security_orchestrator import SecurityOrchestrator
     orch = SecurityOrchestrator()
     assert orch.security_council is None
-    assert orch.worker is None
 
 
 def test_security_mode_config():

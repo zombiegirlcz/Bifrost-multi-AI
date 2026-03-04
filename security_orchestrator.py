@@ -1,53 +1,44 @@
 """
 Bifrost 2.0 — Security Orchestrátor: řídí kyber-simulační workflow
+Používá Monica Multi-Chat pro Red/Blue/Purple Team simulaci
 """
 import asyncio
-from session_manager import SessionManager
+from session_manager import MonicaMultiSession
 from security_brain import SecurityBrainCouncil
 from worker import Worker
 from feedback_loop import FeedbackLoop
 from protocol import BifrostMessage, Phase, Status
 from utils.logger import log_phase, log_banner, log_code
 from utils.file_manager import FileManager
-from config import OUTPUT_DIR
+from config import OUTPUT_DIR, WORKER_MODE
 
 
 class SecurityOrchestrator:
     """Řídí bezpečnostní simulaci: útok → obrana → analýza → sandbox test."""
 
     def __init__(self):
-        self.session_manager = SessionManager()
+        self.monica = MonicaMultiSession()
         self.file_manager = FileManager(OUTPUT_DIR)
         self.security_council: SecurityBrainCouncil | None = None
         self.worker: Worker | None = None
 
     async def initialize(self):
-        """Inicializuje sessions a přiřadí role."""
+        """Inicializuje Monica multi-chat + přiřadí bezpečnostní role."""
         log_banner()
         log_phase("worker_build", "orchestrator",
                  "🛡️ Inicializuji bezpečnostní simulaci...")
 
-        await self.session_manager.initialize()
+        await self.monica.connect()
+        self.security_council = SecurityBrainCouncil(self.monica)
 
-        brains = self.session_manager.get_brains()
-        copilot = self.session_manager.get_worker()
-
-        if len(brains) < 2:
-            raise RuntimeError(
-                "Bezpečnostní simulace vyžaduje minimálně 2 mozky! "
-                f"Připojeno: {len(brains)}. Zkontroluj cookies."
-            )
-        if not copilot:
-            raise RuntimeError("Copilot není připojen! Zkontroluj cookies.")
-
-        self.security_council = SecurityBrainCouncil(brains)
-        self.worker = Worker(copilot, self.file_manager)
-
-        roles_str = ", ".join(
-            f"{k}: {v}" for k, v in self.security_council.role_map.items()
-        )
-        log_phase("complete", "orchestrator",
-                 f"Připojeno: {len(brains)} mozků ({roles_str}) + 1 dělník")
+        if WORKER_MODE == "mailbox":
+            from worker_mailbox import MailboxWorker
+            self.worker = MailboxWorker(self.file_manager)
+            log_phase("complete", "orchestrator",
+                     "🛡️ Připojeno: 3 mozky (Red/Blue/Purple) + 📬 Mailbox Worker")
+        else:
+            log_phase("complete", "orchestrator",
+                     "🛡️ Připojeno: 3 mozky (Red/Blue/Purple) — Worker mode: playwright N/A")
 
     async def run(self, task: str) -> BifrostMessage:
         """Spustí kompletní bezpečnostní simulaci."""
@@ -136,7 +127,7 @@ class SecurityOrchestrator:
         return await self.worker.test(build_result)
 
     async def shutdown(self):
-        await self.session_manager.shutdown()
+        await self.monica.disconnect()
 
     def _generate_security_report(self, task: str,
                                    result: BifrostMessage) -> str:

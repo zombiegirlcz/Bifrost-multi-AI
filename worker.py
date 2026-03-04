@@ -3,7 +3,6 @@ Bifrost 2.0 — Worker modul: Copilot jako dělník — staví, testuje, reportu
 """
 import json
 import re
-from session_manager import AISession
 from protocol import BifrostMessage, Phase, Status, TestResult
 from utils.logger import log_phase, log_code, log_test_results, log_error
 from utils.file_manager import FileManager
@@ -21,7 +20,7 @@ def load_template(name: str) -> str:
 class Worker:
     """Copilot jako dělník — přijímá kód, staví, testuje, reportuje."""
 
-    def __init__(self, copilot_session: AISession, file_manager: FileManager):
+    def __init__(self, copilot_session, file_manager: FileManager):
         self.copilot = copilot_session
         self.fm = file_manager
 

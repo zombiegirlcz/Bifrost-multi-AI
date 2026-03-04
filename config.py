@@ -14,42 +14,48 @@ TEMPLATES_DIR = BASE_DIR / "templates"
 # Termux Chromium — nativní binárka (obchází glibc problém)
 BROWSER_PATH = shutil.which("chromium-browser") or shutil.which("chromium") or "/data/data/com.termux/files/usr/bin/chromium-browser"
 
-# AI Model konfigurace
-MODELS = {
-    "chatgpt": {
-        "name": "ChatGPT",
-        "role": "brain",
-        "url": "https://chatgpt.com/",
-        "cookies": COOKIES_DIR / "chatgpt_cookies.json",
-        "input_selector": "textarea[placeholder*='message']",
-        "submit_selector": "button[aria-label*='Send']",
-        "response_selector": "[data-message-author-role='assistant']",
-        "wait_selector": "button[aria-label*='Send']:not([disabled])",
-        "timeout": 120000,
-    },
+# ═══════════════════════════════════════════════════════════════
+# Monica Multi-Chat — 1 stránka, 3 mozky najednou
+# ═══════════════════════════════════════════════════════════════
+MONICA_URL = "https://monica.im/cs/products/ai-chat"
+MONICA_COOKIES = COOKIES_DIR / "monica_cookies.json"
+
+# CSS selektory zjištěné live debugem z Monica stránky
+MONICA_SELECTORS = {
+    "layout_icons":     ".chat-footer--_4Mms .icon--dFXLr",
+    "layout_3col_idx":  2,       # nth(2) = 3 sloupce
+    "panel":            ".chat-item--ZYRve",
+    "panel_title":      ".title--zoZYE",
+    "model_dropdown":   ".dropdown-menu-item--QeH1L",
+    "global_input":     ".footer--eDFl6 textarea",
+    "global_send":      ".footer--eDFl6 svg.icon--R8Ygf",
+}
+
+# Tři mozky — role + model v Monica dropdownu
+# Architekt = Claude, Kreativní = Gemini, Kritik = GPT
+MONICA_PANELS = {
     "claude": {
-        "name": "Claude",
-        "role": "brain",
-        "url": "https://chatbotai.co/chat",
-        "cookies": COOKIES_DIR / "chatbot_ai_cookies.json",
-        "input_selector": "textarea.chat-input",
-        "submit_selector": "button.send-button",
-        "response_selector": ".message.bot",
-        "wait_selector": "button.send-button:not([disabled])",
-        "timeout": 120000,
-        "post_connect": {"dismiss_popup": True, "select_model": "Claude Opus 4.6"},
+        "role": "architekt",
+        "model_label": "Claude 4.5 Haiku",  # free tier (premium: Claude 4.6 Opus)
+        "panel_index": 0,
+        "system_prefix": "Jsi hlavní architekt. Navrhuj čistý, udržitelný kód.",
     },
     "gemini": {
-        "name": "Gemini",
-        "role": "brain",
-        "url": "https://gemini.google.com/app",
-        "cookies": COOKIES_DIR / "gemini_cookies.json",
-        "input_selector": "textarea.gds-body-l",
-        "submit_selector": "mat-icon.send-icon",
-        "response_selector": "message-content",
-        "wait_selector": "textarea.gds-body-l",
-        "timeout": 120000,
+        "role": "kreativní",
+        "model_label": "Gemini 3 Flash",
+        "panel_index": 1,
+        "system_prefix": "Jsi kreativní myslitel. Hledej neotřelá, inovativní řešení.",
     },
+    "gpt": {
+        "role": "kritik",
+        "model_label": "GPT-4o mini",  # free tier (premium: GPT-5.2)
+        "panel_index": 2,
+        "system_prefix": "Jsi kritik. Hledej chyby, edge-casy a bezpečnostní díry.",
+    },
+}
+
+# Legacy konfigurace — zachováno pro zpětnou kompatibilitu testů
+MODELS = {
     "copilot": {
         "name": "Copilot",
         "role": "worker",
@@ -69,6 +75,8 @@ MAX_FIX_ITERATIONS = 5    # Max pokusů o opravu chyb
 RATE_LIMIT_DELAY = 3.0    # Sekundy mezi requesty na stejný model
 BROWSER_STARTUP_DELAY = 30  # Sekundy pauzy mezi spuštěním každého browseru (Termux šetření RAM)
 CONSENSUS_THRESHOLD = 0.7  # Shoda potřebná pro konsenzus (0-1)
+RESPONSE_POLL_INTERVAL = 3  # Sekundy mezi pokusy o přečtení odpovědi
+RESPONSE_MAX_WAIT = 120     # Max sekund čekání na odpověď
 
 # Worker mode: "playwright" (web automation) nebo "mailbox" (CLI Copilot)
 WORKER_MODE = "mailbox"
