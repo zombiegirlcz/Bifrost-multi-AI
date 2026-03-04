@@ -61,8 +61,8 @@ class MonicaMultiSession:
                 cookies = _sanitize_cookies(json.load(f))
 
         self.context = await self.browser.new_context(
-            user_agent="Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 "
-                       "(KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36")
+            user_agent="Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+                       "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
         if cookies:
             await self.context.add_cookies(cookies)
 
