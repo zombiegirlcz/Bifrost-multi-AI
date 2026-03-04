@@ -44,10 +44,10 @@ MODELS = {
         "role": "brain",
         "url": "https://gemini.google.com/app",
         "cookies": COOKIES_DIR / "gemini_cookies.json",
-        "input_selector": ".ql-editor",
-        "submit_selector": "button[aria-label*='Send message']",
+        "input_selector": "textarea.gds-body-l",
+        "submit_selector": "mat-icon.send-icon",
         "response_selector": "message-content",
-        "wait_selector": "button[aria-label*='Send']:not([disabled])",
+        "wait_selector": "textarea.gds-body-l",
         "timeout": 120000,
     },
     "copilot": {
