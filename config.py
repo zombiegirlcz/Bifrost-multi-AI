@@ -37,6 +37,7 @@ MODELS = {
         "response_selector": ".message.bot",
         "wait_selector": "button.send-button:not([disabled])",
         "timeout": 120000,
+        "post_connect": {"dismiss_popup": True, "select_model": "Claude Opus 4.6"},
     },
     "gemini": {
         "name": "Gemini",
@@ -59,6 +60,7 @@ MODELS = {
         "response_selector": ".message.bot",
         "wait_selector": "button.send-button:not([disabled])",
         "timeout": 120000,
+        "post_connect": {"dismiss_popup": True},
     },
     "copilot": {
         "name": "Copilot",
