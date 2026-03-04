@@ -13,7 +13,7 @@ except ImportError:
 from utils.logger import log_phase, log_error
 from utils.rate_limiter import RateLimiter
 from utils.human_behavior import HumanBehavior
-from config import MODELS, CHROMIUM_PATH, BROWSER_STARTUP_DELAY
+from config import MODELS, BROWSER_PATH, BROWSER_STARTUP_DELAY
 
 
 class AISession:
@@ -32,8 +32,8 @@ class AISession:
     async def connect(self, playwright):
         """Inicializuje browser session s cookies."""
         try:
-            self.browser = await playwright.chromium.launch(
-                executable_path=CHROMIUM_PATH,
+            self.browser = await playwright.firefox.launch(
+                executable_path=BROWSER_PATH,
                 headless=True,
                 args=["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"]
             )

@@ -12,7 +12,7 @@ OUTPUT_DIR = BASE_DIR / "output"
 TEMPLATES_DIR = BASE_DIR / "templates"
 
 # Termux Chromium — nativní binárka (obchází glibc problém)
-CHROMIUM_PATH = shutil.which("chromium-browser") or "/data/data/com.termux/files/usr/bin/chromium-browser"
+BROWSER_PATH = shutil.which("firefox") or "/data/data/com.termux/files/usr/bin/firefox"
 
 # AI Model konfigurace
 MODELS = {
