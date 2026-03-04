@@ -73,7 +73,7 @@ class AISession:
             await self.human.anti_detection_routine()
 
             self.is_connected = True
-            log_phase("worker_build", self.model_key, f"Session připojena: {self.name}")
+            log_phase("worker_build", self.model_key, f"✅ {self.name} připojen")
 
         except Exception as e:
             log_error(self.model_key, f"Nepodařilo se připojit: {e}")
@@ -81,59 +81,66 @@ class AISession:
             raise
 
     async def _post_connect(self, post: dict):
-        """Post-connect akce: zavři popup, vyber model."""
+        """Post-connect akce: zavři popup, vyber model. Rychlé — nesekne se."""
         # 1) Zavři payment/upgrade popup (X tlačítko v rohu)
         if post.get("dismiss_popup"):
-            await asyncio.sleep(3)  # počkej až se popup zobrazí
+            log_phase("worker_build", self.model_key, "🔍 Hledám popup...")
+            await asyncio.sleep(2)
+            popup_closed = False
             for selector in [
                 "button.close", "button.modal-close", "[aria-label='Close']",
-                ".modal button:has-text('×')", ".modal button:has-text('✕')",
                 "button:has-text('×')", "button:has-text('✕')", "button:has-text('X')",
-                ".popup-close", "[data-dismiss]", ".dialog-close",
-                "svg.close-icon", "button >> svg[class*='close']",
+                ".popup-close", "[data-dismiss]",
             ]:
                 try:
-                    close_btn = await self.page.wait_for_selector(selector, timeout=3000)
+                    close_btn = await self.page.wait_for_selector(selector, timeout=1500)
                     if close_btn:
                         await close_btn.click()
                         log_phase("worker_build", self.model_key, "✕ Popup zavřen")
+                        popup_closed = True
                         await asyncio.sleep(1)
                         break
                 except:
                     continue
+            if not popup_closed:
+                log_phase("worker_build", self.model_key, "✓ Žádný popup")
 
-        # 2) Vyber model (klikni na dropdown, pak vyber konkrétní model)
+        # 2) Vyber model
         model_name = post.get("select_model")
         if model_name:
-            await asyncio.sleep(2)
-            # Klikni na model selector / dropdown
+            log_phase("worker_build", self.model_key, f"🔍 Hledám model selector...")
+            await asyncio.sleep(1)
+            dropdown_found = False
             for dropdown_sel in [
                 "button.model-selector", "[class*='model-select']",
                 "button:has-text('Model')", "[class*='dropdown'] button",
-                "select.model", ".model-picker", "[data-testid*='model']",
+                ".model-picker", "[data-testid*='model']",
             ]:
                 try:
-                    dropdown = await self.page.wait_for_selector(dropdown_sel, timeout=3000)
+                    dropdown = await self.page.wait_for_selector(dropdown_sel, timeout=1500)
                     if dropdown:
                         await dropdown.click()
+                        dropdown_found = True
                         await asyncio.sleep(1)
                         break
                 except:
                     continue
 
-            # Klikni na požadovaný model v seznamu
-            try:
-                model_option = await self.page.wait_for_selector(
-                    f"text='{model_name}'", timeout=5000
-                )
-                if model_option:
-                    await model_option.click()
-                    log_phase("worker_build", self.model_key,
-                             f"🤖 Model vybrán: {model_name}")
-                    await asyncio.sleep(1)
-            except:
-                log_error(self.model_key,
-                         f"Model '{model_name}' nenalezen, používám default")
+            if dropdown_found:
+                try:
+                    model_option = await self.page.wait_for_selector(
+                        f"text='{model_name}'", timeout=3000
+                    )
+                    if model_option:
+                        await model_option.click()
+                        log_phase("worker_build", self.model_key,
+                                 f"🤖 Model vybrán: {model_name}")
+                        await asyncio.sleep(1)
+                except:
+                    log_error(self.model_key,
+                             f"Model '{model_name}' nenalezen, používám default")
+            else:
+                log_error(self.model_key, "Model dropdown nenalezen, používám default")
 
     async def send_message(self, message: str) -> str:
         """Pošle zprávu AI modelu a vrátí odpověď."""
