@@ -10,3 +10,5 @@ output/*
 queue/pending/*.json
 queue/results/*.json
 !queue/.gitkeep
+tui/
+bifrost_cli_agent/
