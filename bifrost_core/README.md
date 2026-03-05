@@ -2,9 +2,8 @@
 
 **Multi-AI Collaborative Coding System pro Termux**
 
-Bifrost propojuje více AI modelů (ChatGPT, Claude, Gemini) jako "mozky"
-a GitHub Copilot jako "dělníka" — společně navrhují, debatují, staví
-a testují kód.
+Bifrost je orchestrator, který propojuje více AI modelů jako "mozky" (Claude Architect, Gemini Creative, GPT Critic)
+a GitHub Copilot CLI jako "dělníka" — společně navrhují, debatují, staví a testují kód.
 
 ## 🚀 Instalace
 
@@ -13,15 +12,14 @@ chmod +x setup.sh
 ./setup.sh
 ```
 
-## 🔑 Cookies
+## 🔑 Cookies (Monica.im)
 
 Exportuj cookies z prohlížeče (např. pomocí rozšíření "Cookie Editor"):
 
-1. `cookies/chatgpt_cookies.json`
-2. `cookies/claude_cookies.json`
-3. `cookies/gemini_cookies.json`
+**Povinné:**
+- `bifrost_core/cookies/monica_cookies.json` — Monica.im multi-chat pro komunikaci s AI mozky
 
-Formát: JSON pole cookies z prohlížeče. Detaily viz `cookies/README.md`.
+Formát: JSON pole cookies z prohlížeče. Detaily viz `bifrost_core/cookies/README.md`.
 
 ## 📝 Použití
 
@@ -84,9 +82,9 @@ python -m bifrost_core.copilot_executor --task task_001
 
 ## 📁 Výstupy
 
-Každý projekt se uloží do `output/` (nebo `vysledky/` pro auto_executor) s:
-- Kompletním kódem
-- Historií iterací
-- Finálním reportem (BIFROST_REPORT.md / SECURITY_REPORT.md)
+Každý projekt se uloží do `bifrost_core/output/` s:
+- Kompletním kódem z konsensuální debaty mozků
+- Historií iterací (iterace s debatami, testy, opravami)
+- Finálním reportem (BIFROST_REPORT.md pro coding / SECURITY_REPORT.md pro security režim)
 
-Poznámka: Tyto adresáře jsou artefakty a při testování se ignorují.
+Poznámka: Výstupní adresáře jsou artefakty a při testování se ignorují (.gitignore).
