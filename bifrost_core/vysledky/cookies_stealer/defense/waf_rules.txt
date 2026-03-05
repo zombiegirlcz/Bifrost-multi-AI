@@ -1,0 +1,9 @@
+text
+Kopírovat
+# ModSecurity / WAF Rules PoC
+# 1. Blokuj document.cookie v URL parametrech
+SecRule ARGS "(document\.cookie|fetch\(|XMLHttpRequest)" "id:1001,phase:2,deny,status:403,msg:'Pokus o kradez cookies'"
+# 2. Blokuj tagy <script>
+SecRule ARGS "(<script>|<\/script>)" "id:1002,phase:2,deny,status:403,msg:'XSS Injection detected'"
+# 3. Vynuť HttpOnly v hlavičkách odpovědi (pokud aplikace selže)
+Header edit Set-Cookie ^(.*)$ $1;HttpOnly;Secure
