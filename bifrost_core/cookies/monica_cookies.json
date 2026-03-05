@@ -1,0 +1,102 @@
+[
+    {
+        "name": "_ga_E249CNSDCV",
+        "value": "GS2.1.s1772639478$o5$g1$t1772639714$j5$l0$h0",
+        "domain": ".monica.im",
+        "path": "/",
+        "secure": false,
+        "httpOnly": false,
+        "expirationDate": 1807199714.018
+    },
+    {
+        "name": "moninca_home_theme",
+        "value": "dark",
+        "domain": "monica.im",
+        "path": "/",
+        "secure": false,
+        "httpOnly": false
+    },
+    {
+        "name": "locale",
+        "value": "cs",
+        "domain": ".monica.im",
+        "path": "/",
+        "secure": false,
+        "httpOnly": false,
+        "sameSite": "Lax",
+        "expirationDate": 1804172311.311
+    },
+    {
+        "name": "wcs_bt",
+        "value": "s_ce3bbc0e51c:1772639712",
+        "domain": "monica.im",
+        "path": "/",
+        "secure": false,
+        "httpOnly": false,
+        "expirationDate": 1807199712.956
+    },
+    {
+        "name": "_fwb",
+        "value": "837ygLVMRDVQGlJiPLNdQT.1772403814891",
+        "domain": ".monica.im",
+        "path": "/",
+        "secure": false,
+        "httpOnly": false,
+        "expirationDate": 1807199712.954
+    },
+    {
+        "name": "_ga",
+        "value": "GA1.1.1581472801.1772403814",
+        "domain": ".monica.im",
+        "path": "/",
+        "secure": false,
+        "httpOnly": false,
+        "expirationDate": 1807199714.026
+    },
+    {
+        "name": "_ga_JDZPETSM4F",
+        "value": "GS2.1.s1772639478$o5$g1$t1772639714$j5$l0$h0",
+        "domain": ".monica.im",
+        "path": "/",
+        "secure": false,
+        "httpOnly": false,
+        "expirationDate": 1807199714.212
+    },
+    {
+        "name": "_ga_RJYZXDEM8N",
+        "value": "GS2.1.s1772639478$o5$g1$t1772639714$j5$l0$h1462028883",
+        "domain": ".monica.im",
+        "path": "/",
+        "secure": false,
+        "httpOnly": false,
+        "expirationDate": 1807199714.365
+    },
+    {
+        "name": "_gcl_au",
+        "value": "1.1.665254616.1772403814",
+        "domain": ".monica.im",
+        "path": "/",
+        "secure": false,
+        "httpOnly": false,
+        "expirationDate": 1780179814
+    },
+    {
+        "name": "_monica_index_cid",
+        "value": "e70460d3-aa43-4365-a6cb-820465f10eee",
+        "domain": "monica.im",
+        "path": "/",
+        "secure": false,
+        "httpOnly": false,
+        "expirationDate": 1804172070
+    },
+    {
+        "name": "session_id",
+        "value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpYXQiOjE3NzI2Mzk2NzAsImlzcyI6Im1vbmljYSIsInVzZXJfaWQiOjE4MzgzNzkzNSwidXNlcl9uYW1lIjoiWm9tYmllZ2lybCIsImp0aSI6Ijc3ZjMxOGJkZDM4MTQ0ODJhNWUyNDhlNDU1NmM2OTE0IiwiY2xpZW50X3R5cGUiOiJ3ZWIifQ.PhRoimXfLc7sXXQlKIN4JBfX0VCfehfjZ4iTaIVZalU",
+        "domain": ".monica.im",
+        "path": "/",
+        "secure": false,
+        "httpOnly": false,
+        "sameSite": "Lax",
+        "expirationDate": 1804175670.425
+    }
+]

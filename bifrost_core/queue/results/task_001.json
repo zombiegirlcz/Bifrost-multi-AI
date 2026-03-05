@@ -1,0 +1,15 @@
+{
+  "files_created": {
+    "target/vulnerable_app.py": "written"
+  },
+  "dependencies": [
+    "flask",
+    "requests"
+  ],
+  "run_command": "python target/vulnerable_app.py",
+  "test_command": "python -m pytest tests/test_security.py -v",
+  "project_dir": "/data/data/com.termux/files/home/Bifrost2.0/output/20260304_191101_security_simuluj_nasazeni_agenta_na_web_",
+  "summary": "Build dokončen. 1 souborů vytvoření/stub. Deps: ['flask', 'requests']. Run: FAIL.",
+  "task_id": "task_001",
+  "completed_at": "2026-03-04T19:18:58.269920"
+}

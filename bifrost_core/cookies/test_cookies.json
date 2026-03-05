@@ -1,0 +1,32 @@
+[
+  {
+    "name": "SAPISID",
+    "value": "IN8g84HQfdikoJeb/Af-CtgFWt1WJMDUfA",
+    "domain": ".google.com",
+    "path": "/",
+    "secure": true,
+    "httpOnly": false,
+    "sameSite": "Lex",
+    "expirationDate": 1807007770.206
+  },
+  {
+    "name": "AEC",
+    "value": "AaJma5vNQ3BtBpvlQRnVQ7mvjIhv0Km7XMg0ivJb0RkKO1qv1bnXszR10fU",
+    "domain": ".google.com",
+    "path": "/",
+    "secure": true,
+    "httpOnly": true,
+    "sameSite": "Strict",
+    "expirationDate": 1787955970.088
+  },
+  {
+    "name": "TEST",
+    "value": "something",
+    "domain": ".google.com",
+    "path": "/",
+    "secure": false,
+    "httpOnly": false,
+    "sameSite": "None",
+    "expirationDate": 1807007770.206
+  }
+]

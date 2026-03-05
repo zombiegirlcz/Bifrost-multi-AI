@@ -1,0 +1,113 @@
+[
+  {
+    "name": "_ga",
+    "value": "GA1.1.37589074.1772572805",
+    "domain": ".chatbotai.co",
+    "path": "/",
+    "secure": false,
+    "httpOnly": false,
+    "expirationDate": 1807132815.893
+  },
+  {
+    "name": "_gcl_aw",
+    "value": "GCL.1772572816.CjwKCAiAqprNBhB6EiwAMe3yhn5pkwOPpvb0jw9GraNJPuEvtXGioEwI-Fy7O_s-04SUG-uqjyc6JhoClVkQAvD_BwE",
+    "domain": ".chatbotai.co",
+    "path": "/",
+    "secure": false,
+    "httpOnly": false,
+    "expirationDate": 1780348816
+  },
+  {
+    "name": "_p2s_uvi",
+    "value": "d2f31fb5.8862268241555232.1772572805193",
+    "domain": ".chatbotai.co",
+    "path": "/",
+    "secure": false,
+    "httpOnly": false,
+    "expirationDate": 1775164907
+  },
+  {
+    "name": "_ga_S3CSN8V3Q6",
+    "value": "GS2.1.s1772572804$o1$g1$t1772572970$j60$l0$h0",
+    "domain": ".chatbotai.co",
+    "path": "/",
+    "secure": false,
+    "httpOnly": false,
+    "expirationDate": 1807132970.696
+  },
+  {
+    "name": "kurabiye_consent",
+    "value": "%7B%22id%22%3A%22IyoAnvKAah2COsV_2UpVlpcP0yjyO8BTnuKgnTM-fTQ%22%2C%22v%22%3A%223.1.1%22%2C%22t%22%3A1772572815845%2C%22e%22%3Atrue%2C%22c%22%3A%7B%22necessary%22%3Atrue%2C%22functional%22%3Atrue%2C%22analytics%22%3Atrue%2C%22performance%22%3Atrue%2C%22advertisement%22%3Atrue%2C%22uncategorised%22%3Atrue%7D%7D",
+    "domain": "chatbotai.co",
+    "path": "/",
+    "secure": true,
+    "httpOnly": false,
+    "sameSite": "Lax",
+    "expirationDate": 1804108815
+  },
+  {
+    "name": "_gcl_au",
+    "value": "1.1.183082892.1772572816",
+    "domain": ".chatbotai.co",
+    "path": "/",
+    "secure": false,
+    "httpOnly": false,
+    "expirationDate": 1780348816
+  },
+  {
+    "name": "g_state",
+    "value": "{\"i_l\":0,\"i_ll\":1772572834740,\"i_b\":\"KYrTgCFH7ev7jOGrtcl/ZHLc/vo3JPI/wUW55IQRFu4\",\"i_e\":{\"enable_itp_optimization\":0}}",
+    "domain": "chatbotai.co",
+    "path": "/",
+    "secure": false,
+    "httpOnly": false,
+    "expirationDate": 1788124834
+  },
+  {
+    "name": "iuli",
+    "value": "%22jw65B7Cu7eXSyfNXAZpC6dDtF283%22",
+    "domain": "chatbotai.co",
+    "path": "/",
+    "secure": true,
+    "httpOnly": false,
+    "expirationDate": 1807132860.302
+  },
+  {
+    "name": "i18n_redirected",
+    "value": "en",
+    "domain": "chatbotai.co",
+    "path": "/",
+    "secure": false,
+    "httpOnly": false,
+    "sameSite": "Lax",
+    "expirationDate": 1804108802.806
+  },
+  {
+    "name": "_p2s_gcl",
+    "value": "CjwKCAiAqprNBhB6EiwAMe3yhn5pkwOPpvb0jw9GraNJPuEvtXGioEwI-Fy7O_s-04SUG-uqjyc6JhoClVkQAvD_BwE",
+    "domain": ".chatbotai.co",
+    "path": "/",
+    "secure": false,
+    "httpOnly": false,
+    "expirationDate": 1775164907
+  },
+  {
+    "name": "kurabiye-consent",
+    "value": "necessary%3Ayes%2Cfunctional%3Ayes%2Canalytics%3Ayes%2Cperformance%3Ayes%2Cadvertisement%3Ayes%2Cuncategorised%3Ayes",
+    "domain": "chatbotai.co",
+    "path": "/",
+    "secure": true,
+    "httpOnly": false,
+    "sameSite": "Lax",
+    "expirationDate": 1804108815
+  },
+  {
+    "name": "_gcl_gs",
+    "value": "2.1.k1$i1772572802$u134057820",
+    "domain": ".chatbotai.co",
+    "path": "/",
+    "secure": false,
+    "httpOnly": false,
+    "expirationDate": 1780348815
+  }
+]

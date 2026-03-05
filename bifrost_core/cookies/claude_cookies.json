@@ -1,0 +1,12 @@
+[
+  {
+    "name": "sessionKey",
+    "value": "dummy_claude_session_key",
+    "domain": "claude.ai",
+    "path": "/",
+    "secure": true,
+    "httpOnly": true,
+    "sameSite": "Lax",
+    "expirationDate": 1900000000
+  }
+]

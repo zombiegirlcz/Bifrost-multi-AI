@@ -1,0 +1,9 @@
+{
+  "files": [
+    "target/vulnerable_app.py"
+  ],
+  "dependencies": [
+    "flask",
+    "requests"
+  ]
+}

@@ -1,0 +1,2 @@
+# Auto-generated stub: defense/waf_rules.txt
+# Task: simuluj nasazeni autonomniho agenta do na web obeti a nasledne stazeni cookies
