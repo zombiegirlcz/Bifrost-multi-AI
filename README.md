@@ -60,6 +60,12 @@ Bifrost creates a **three-layer architecture**:
 ✅ **Termux-Optimized** — Native Chromium binary, no glibc overhead  
 ✅ **Extensible** — Pluggable worker modes, configurable AI models  
 
+## 🆕 Novinky
+
+- 2026-03-06: Aktualizována dokumentace a přidána sekce "Novinky" se stručným přehledem změn a vylepšení.
+- Hlavní body: aktualizovaný přehled architektury, zpřesněné instrukce pro MAILBOX worker a poznámky k bezpečnostnímu režimu.
+
+
 ---
 
 ## 🏗️ Architecture
